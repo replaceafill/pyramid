@@ -14,12 +14,12 @@ This particular tutorial was developed under Apple's Mac OS X platform
 largely the same for all systems, delta specific path information for
 commands and files.
 
-.. note:: Unfortunately these instructions almost certainly won't work
-   for deploying a :app:`Pyramid` application on a Windows system
-   using ``mod_wsgi``.  If you have experience with :app:`Pyramid`
-   and ``mod_wsgi`` on Windows systems, please help us document
-   this experience by submitting documentation to the `mailing list
-   <http://lists.repoze.org/listinfo/repoze-dev>`_.
+.. note:: Unfortunately these instructions almost certainly won't work for
+   deploying a :app:`Pyramid` application on a Windows system using
+   ``mod_wsgi``.  If you have experience with :app:`Pyramid` and ``mod_wsgi``
+   on Windows systems, please help us document this experience by submitting
+   documentation to the `Pylons-devel maillist
+   <http://groups.google.com/group/pylons-devel>`_.
 
 #.  The tutorial assumes you have Apache already installed on your
     system.  If you do not, install Apache 2.X for your platform in
@@ -64,7 +64,7 @@ commands and files.
     .. code-block:: text
 
        $ cd ~/modwsgi/env
-       $ bin/paster create -t pyramid_starter myapp
+       $ bin/pcreate -s starter myapp
        $ cd myapp
        $ ../bin/python setup.py install
 
@@ -75,13 +75,15 @@ commands and files.
 
        from pyramid.paster import get_app
        application = get_app(
-         '/Users/chrism/modwsgi/env/myapp/myapp.ini', 'main')
+         '/Users/chrism/modwsgi/env/myapp/production.ini', 'main')
 
-    The first argument to ``get_app`` is the project Paste
-    configuration file name.  The second is the name of the section
-    within the .ini file that should be loaded by ``mod_wsgi``.  The
-    assignment to the name ``application`` is important: mod_wsgi
-    requires finding such an assignment when it opens the file.
+    The first argument to ``get_app`` is the project configuration file
+    name.  It's best to use the ``production.ini`` file provided by your
+    scaffold, as it contains settings appropriate for
+    production.  The second is the name of the section within the .ini file
+    that should be loaded by ``mod_wsgi``.  The assignment to the name
+    ``application`` is important: mod_wsgi requires finding such an
+    assignment when it opens the file.
 
 #.  Make the ``pyramid.wsgi`` script executable.
 
@@ -97,16 +99,17 @@ commands and files.
     .. code-block:: apache
 
        # Use only 1 Python sub-interpreter.  Multiple sub-interpreters
-       # play badly with C extensions.
+       # play badly with C extensions.  See
+       # http://stackoverflow.com/a/10558360/209039
        WSGIApplicationGroup %{GLOBAL}
        WSGIPassAuthorization On
-       WSGIDaemonProcess pyramid user=chrism group=staff processes=1 threads=4 \
+       WSGIDaemonProcess pyramid user=chrism group=staff threads=4 \
           python-path=/Users/chrism/modwsgi/env/lib/python2.6/site-packages
        WSGIScriptAlias /myapp /Users/chrism/modwsgi/env/pyramid.wsgi
 
        <Directory /Users/chrism/modwsgi/env>
          WSGIProcessGroup pyramid
-         Order allow, deny
+         Order allow,deny
          Allow from all
        </Directory>
  

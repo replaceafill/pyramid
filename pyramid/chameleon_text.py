@@ -1,7 +1,9 @@
 import sys
 
 from zope.deprecation import deprecated
-from zope.interface import implements
+from zope.interface import implementer
+
+from pyramid.compat import reraise
 
 try:
     from chameleon.zpt.template import PageTextTemplateFile
@@ -12,7 +14,7 @@ except ImportError: # pragma: no cover
     # Chameleon doesn't work on non-CPython platforms
     class PageTextTemplateFile(object):
         def __init__(self, *arg, **kw):
-            raise ImportError, exc, tb
+            reraise(ImportError, exc, tb)
 
 from pyramid.interfaces import ITemplateRenderer
 
@@ -23,8 +25,8 @@ from pyramid.path import caller_package
 def renderer_factory(info):
     return renderers.template_renderer_factory(info, TextTemplateRenderer)
 
+@implementer(ITemplateRenderer)
 class TextTemplateRenderer(object):
-    implements(ITemplateRenderer)
     def __init__(self, path, lookup):
         self.path = path
         self.lookup = lookup
@@ -57,7 +59,9 @@ def get_renderer(path):
     package-relative path, an absolute path, or a :term:`asset
     specification`.
     
-    .. warning:: This API is deprecated in :app:`Pyramid` 1.0.  Use
+    .. warning::
+
+       This API is deprecated in :app:`Pyramid` 1.0.  Use
        :func:`pyramid.renderers.get_renderer` instead.
     """
     package = caller_package()
@@ -75,7 +79,9 @@ def get_template(path):
     The ``path`` argument may be a package-relative path, an absolute
     path, or a :term:`asset specification`.
 
-    .. warning:: This API is deprecated in :app:`Pyramid` 1.0.  Use
+    .. warning::
+
+       This API is deprecated in :app:`Pyramid` 1.0.  Use
        the ``implementation()`` method of a template renderer retrieved via
        :func:`pyramid.renderers.get_renderer` instead.
     """
@@ -97,7 +103,9 @@ def render_template(path, **kw):
     names to the template, and so may be used within the template
     itself.  Returns a string.
 
-    .. warning:: This API is deprecated in :app:`Pyramid` 1.0.  Use
+    .. warning::
+
+       This API is deprecated in :app:`Pyramid` 1.0.  Use
        :func:`pyramid.renderers.render` instead.
     """
     package = caller_package()
@@ -119,7 +127,9 @@ def render_template_to_response(path, **kw):
     itself.  Returns a :term:`Response` object with the body as the
     template result.
 
-    .. warning:: This API is deprecated in :app:`Pyramid` 1.0.  Use
+    .. warning::
+
+       This API is deprecated in :app:`Pyramid` 1.0.  Use
        :func:`pyramid.renderers.render_to_response` instead.
     """
     package = caller_package()

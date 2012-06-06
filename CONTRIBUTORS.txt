@@ -1,4 +1,4 @@
-Pylons Project Contributor Agreement
+ Pylons Project Contributor Agreement
 ====================================
 
 The submitter agrees by adding his or her name within the section below named
@@ -16,7 +16,7 @@ Treatment of Account
 Contributor will not allow anyone other than the Contributor to use his or
 her username or source repository login to submit code to a Pylons Project
 source repository. Should Contributor become aware of any such use,
-Contributor will immediately by notifying Agendaless Consulting.
+Contributor will immediately notify Agendaless Consulting.
 Notification must be performed by sending an email to
 webmaster@agendaless.com.  Until such notice is received, Contributor will be
 presumed to have taken all actions made through Contributor's account. If the
@@ -124,3 +124,51 @@ Contributors
 - Marcin Lulek, 2011/01/02
 
 - John Shipman, 2011/01/15
+
+- Wichert Akkerman, 2011/01/19
+
+- Christopher Lambacher, 2011/02/12
+
+- Malthe Borch, 2011/02/28
+
+- Carlos de la Guardia, 2011/03/29
+
+- Joel Bohman, 2011/04/16
+
+- Juliusz Gonera, 2011/04/17
+
+- Philip Jenvey, 2011/04/24
+
+- Michael Merickel, 2011/5/25
+
+- Christoph Zwerschke, 2011/06/07
+
+- Atsushi Odagiri, 2011/07/02
+
+- Shane Hathaway, 2011/07/22
+
+- Manuel Hermann, 2011/07/11
+
+- Richard Barrell, 2011/11/07
+
+- Chris Shenton, 2011/11/07
+
+- Ken Manheimer, 2011/11/07
+
+- Reed O'Brien, 2011/11/07
+
+- Klee Dienes, 2011/10/30
+
+- Michael Ryabushin, 2011/12/14
+
+- Mike Orr, 2012/02/14
+
+- Paul M. Winkler, 2012/02/22
+
+- Martijn Pieters, 2012/03/02
+
+- Steve Piercy, 2012/03/27
+
+- Wayne Witzel III, 2012/03/27
+
+- Marin Rukavina, 2012/05/03

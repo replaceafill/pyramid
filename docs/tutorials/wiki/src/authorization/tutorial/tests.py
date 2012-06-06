@@ -5,7 +5,7 @@ from pyramid import testing
 class PageModelTests(unittest.TestCase):
 
     def _getTargetClass(self):
-        from tutorial.models import Page
+        from .models import Page
         return Page
 
     def _makeOne(self, data=u'some data'):
@@ -14,11 +14,11 @@ class PageModelTests(unittest.TestCase):
     def test_constructor(self):
         instance = self._makeOne()
         self.assertEqual(instance.data, u'some data')
-        
+
 class WikiModelTests(unittest.TestCase):
 
     def _getTargetClass(self):
-        from tutorial.models import Wiki
+        from .models import Wiki
         return Wiki
 
     def _makeOne(self):
@@ -31,7 +31,7 @@ class WikiModelTests(unittest.TestCase):
 
 class AppmakerTests(unittest.TestCase):
     def _callFUT(self, zodb_root):
-        from tutorial.models import appmaker
+        from .models import appmaker
         return appmaker(zodb_root)
 
     def test_it(self):
@@ -42,7 +42,7 @@ class AppmakerTests(unittest.TestCase):
 
 class ViewWikiTests(unittest.TestCase):
     def test_it(self):
-        from tutorial.views import view_wiki
+        from .views import view_wiki
         context = testing.DummyResource()
         request = testing.DummyRequest()
         response = view_wiki(context, request)
@@ -50,7 +50,7 @@ class ViewWikiTests(unittest.TestCase):
 
 class ViewPageTests(unittest.TestCase):
     def _callFUT(self, context, request):
-        from tutorial.views import view_page
+        from .views import view_page
         return view_page(context, request)
 
     def test_it(self):
@@ -72,24 +72,23 @@ class ViewPageTests(unittest.TestCase):
             '</p>\n</div>\n')
         self.assertEqual(info['edit_url'],
                          'http://example.com/thepage/edit_page')
-        
-    
+
+
 class AddPageTests(unittest.TestCase):
     def _callFUT(self, context, request):
-        from tutorial.views import add_page
+        from .views import add_page
         return add_page(context, request)
 
     def test_it_notsubmitted(self):
-        from pyramid.url import resource_url
         context = testing.DummyResource()
         request = testing.DummyRequest()
         request.subpath = ['AnotherPage']
         info = self._callFUT(context, request)
         self.assertEqual(info['page'].data,'')
         self.assertEqual(info['save_url'],
-                         resource_url(
-                             context, request, 'add_page', 'AnotherPage'))
-        
+                         request.resource_url(
+                             context, 'add_page', 'AnotherPage'))
+
     def test_it_submitted(self):
         context = testing.DummyResource()
         request = testing.DummyRequest({'form.submitted':True,
@@ -103,18 +102,17 @@ class AddPageTests(unittest.TestCase):
 
 class EditPageTests(unittest.TestCase):
     def _callFUT(self, context, request):
-        from tutorial.views import edit_page
+        from .views import edit_page
         return edit_page(context, request)
 
     def test_it_notsubmitted(self):
-        from pyramid.url import resource_url
         context = testing.DummyResource()
         request = testing.DummyRequest()
         info = self._callFUT(context, request)
         self.assertEqual(info['page'], context)
         self.assertEqual(info['save_url'],
-                         resource_url(context, request, 'edit_page'))
-        
+                         request.resource_url(context, 'edit_page'))
+
     def test_it_submitted(self):
         context = testing.DummyResource()
         request = testing.DummyRequest({'form.submitted':True,

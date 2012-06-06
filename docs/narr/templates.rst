@@ -46,7 +46,9 @@ within the body of a view callable like so:
                                  {'foo':1, 'bar':2}, 
                                  request=request)
 
-.. warning:: Earlier iterations of this documentation
+.. warning::
+
+   Earlier iterations of this documentation
    (pre-version-1.3) encouraged the application developer to use
    ZPT-specific APIs such as
    :func:`pyramid.chameleon_zpt.render_template_to_response` and
@@ -203,7 +205,7 @@ may set attributes on the response that influence these values.
 
 Here's an example of changing the content-type and status of the
 response object returned by
-:func:`pyramid.renderers.render_to_response`:
+:func:`~pyramid.renderers.render_to_response`:
 
 .. code-block:: python
    :linenos:
@@ -219,7 +221,7 @@ response object returned by
        return response
 
 Here's an example of manufacturing a response object using the result
-of :func:`pyramid.renderers.render` (a string):
+of :func:`~pyramid.renderers.render` (a string):
 
 .. code-block:: python
    :linenos:
@@ -241,23 +243,36 @@ of :func:`pyramid.renderers.render` (a string):
    single: renderer (template)
 
 
+.. index::
+   pair: renderer; system values
+
 .. _renderer_system_values:
 
 System Values Used During Rendering
 -----------------------------------
 
 When a template is rendered using
-:func:`pyramid.renderers.render_to_response` or
-:func:`pyramid.renderers.render`, the renderer representing the
-template will be provided with a number of *system* values.  These
-values are provided in a dictionary to the renderer and include:
-
-``context``
-  The current :app:`Pyramid` context if ``request`` was provided as
-  a keyword argument, or ``None``.
+:func:`~pyramid.renderers.render_to_response` or
+:func:`~pyramid.renderers.render`, or a ``renderer=`` argument to view
+configuration (see :ref:`templates_used_as_renderers`), the renderer
+representing the template will be provided with a number of *system* values.
+These values are provided to the template:
 
 ``request``
-  The request provided as a keyword argument.
+  The value provided as the ``request`` keyword argument to
+  ``render_to_response`` or ``render`` *or* the request object passed to the
+  view when the ``renderer=`` argument to view configuration is being used to
+  render the template.
+
+``req``
+  An alias for ``request``.
+
+``context``
+  The current :app:`Pyramid` :term:`context` if ``request`` was provided as a
+  keyword argument to ``render_to_response`` or ``render``, or ``None`` if
+  the ``request`` keyword argument was not provided.  This value will always
+  be provided if the template is rendered as the result of a ``renderer=``
+  argument to view configuration being used.
 
 ``renderer_name``
   The renderer name used to perform the rendering,
@@ -265,24 +280,34 @@ values are provided in a dictionary to the renderer and include:
 
 ``renderer_info`` 
   An object implementing the :class:`pyramid.interfaces.IRendererInfo`
-  interface.  Basically, an object with the following attributes:
-  ``name``, ``package`` and ``type``.
+  interface.  Basically, an object with the following attributes: ``name``,
+  ``package`` and ``type``.
 
-You can define more values which will be passed to every template
-executed as a result of rendering by defining :term:`renderer
-globals`.
+``view``
+  The view callable object that was used to render this template.  If the
+  view callable is a method of a class-based view, this will be an instance
+  of the class that the method was defined on.  If the view callable is a
+  function or instance, it will be that function or instance.  Note that this
+  value will only be automatically present when a template is rendered as a
+  result of a ``renderer=`` argument; it will be ``None`` when the
+  ``render_to_response`` or ``render`` APIs are used.
+
+You can define more values which will be passed to every template executed as
+a result of rendering by defining :term:`renderer globals`.
 
 What any particular renderer does with these system values is up to the
-renderer itself, but most template renderers, including Chameleon and
-Mako renderers, make these names available as top-level template
-variables.
+renderer itself, but most template renderers, including Chameleon and Mako
+renderers, make these names available as top-level template variables.
+
+.. index::
+   pair: renderer; templates
 
 .. _templates_used_as_renderers:
 
 Templates Used as Renderers via Configuration
 ---------------------------------------------
 
-An alternative to using :func:`pyramid.renderers.render_to_response`
+An alternative to using :func:`~pyramid.renderers.render_to_response`
 to render templates manually in your view callable code, is
 to specify the template as a :term:`renderer` in your
 *view configuration*. This can be done with any of the 
@@ -299,7 +324,7 @@ The association of a template as a renderer for a :term:`view
 configuration` makes it possible to replace code within a :term:`view
 callable` that handles the rendering of a template.
 
-Here's an example of using a :class:`pyramid.view.view_config`
+Here's an example of using a :class:`~pyramid.view.view_config`
 decorator to specify a :term:`view configuration` that names a
 template renderer:
 
@@ -329,9 +354,8 @@ template renderer:
    function.  View-configuration-relative asset specifications work only
    in Chameleon, not in Mako templates.
 
-Similar renderer configuration can be done imperatively and via
-:term:`ZCML`.  See :ref:`views_which_use_a_renderer`.  See also
-:ref:`built_in_renderers`.
+Similar renderer configuration can be done imperatively.  See
+:ref:`views_which_use_a_renderer`.  See also :ref:`built_in_renderers`.
 
 Although a renderer path is usually just a simple relative pathname, a path
 named as a renderer can be absolute, starting with a slash on UNIX or a drive
@@ -360,20 +384,15 @@ templates as renderers.  See :ref:`available_template_system_bindings`.
    with renderers externally via view configuration typically return a
    dictionary, as above.  Making assertions about results returned in a
    dictionary is almost always more direct and straightforward than
-   needing to parse HTML.  Specifying a renderer from within
-   :term:`ZCML` (as opposed to imperatively or via a ``view_config``
-   decorator, or using a template directly from within a view callable)
-   also makes it possible for someone to modify the template used to
-   render a view without needing to fork your code to do so.  See
-   :ref:`extending_chapter` for more information.
+   needing to parse HTML.
 
-By default, views rendered via a template renderer return a
-:term:`Response` object which has a *status code* of ``200 OK``, and a
-*content-type* of ``text/html``.  To vary attributes of the response
-of a view that uses a renderer, such as the content-type, headers, or
-status attributes, you must set attributes on the *request* object
-within the view before returning the dictionary.  See
-:ref:`response_request_attrs` for more information.
+By default, views rendered via a template renderer return a :term:`Response`
+object which has a *status code* of ``200 OK``, and a *content-type* of
+``text/html``.  To vary attributes of the response of a view that uses a
+renderer, such as the content-type, headers, or status attributes, you must
+use the API of the :class:`pyramid.response.Response` object exposed as
+``request.response`` within the view before returning the dictionary.  See
+:ref:`request_response_attr` for more information.
 
 The same set of system values are provided to templates rendered via a
 renderer view configuration as those provided to templates rendered
@@ -401,14 +420,6 @@ The language definition documentation for Chameleon ZPT-style
 templates is available from `the Chameleon website
 <http://chameleon.repoze.org/>`_.
 
-.. warning:: 
-
-   :term:`Chameleon` only works on :term:`CPython` platforms and
-   :term:`Google App Engine`.  On :term:`Jython` and other non-CPython
-   platforms, you should use Mako (see :ref:`mako_templates`) or
-   ``pyramid_jinja2`` instead.  See
-   :ref:`available_template_system_bindings`.
-
 Given a :term:`Chameleon` ZPT template named ``foo.pt`` in a directory
 in your application named ``templates``, you can render the template as
 a :term:`renderer` like so:
@@ -426,7 +437,7 @@ See also :ref:`built_in_renderers` for more general information about
 renderers, including Chameleon ZPT renderers.
 
 .. index::
-   single: sample template
+   single: ZPT template (sample)
 
 A Sample ZPT Template
 ~~~~~~~~~~~~~~~~~~~~~
@@ -448,7 +459,8 @@ Here's what a simple :term:`Chameleon` ZPT template used under
       <body>
          <h1 class="title">Welcome to <code>${project}</code>, an
 	  application generated by the <a
-	  href="http://docs.pylonsproject.org/projects/pyramid/dev/">pyramid</a> web
+	  href="http://docs.pylonsproject.org/projects/pyramid/current/"
+         >pyramid</a> web
 	  application framework.</h1>
       </body>
     </html>
@@ -456,8 +468,8 @@ Here's what a simple :term:`Chameleon` ZPT template used under
 Note the use of :term:`Genshi` -style ``${replacements}`` above.  This
 is one of the ways that :term:`Chameleon` ZPT differs from standard
 ZPT.  The above template expects to find a ``project`` key in the set
-of keywords passed in to it via :func:`pyramid.renderers.render` or
-:func:`pyramid.renderers.render_to_response`. Typical ZPT
+of keywords passed in to it via :func:`~pyramid.renderers.render` or
+:func:`~pyramid.renderers.render_to_response`. Typical ZPT
 attribute-based syntax (e.g. ``tal:content`` and ``tal:replace``) also
 works in these templates.
 
@@ -480,7 +492,7 @@ passing the macro template, or even the macro itself, *into* the rendered
 template.  To do this you can use the :func:`pyramid.renderers.get_renderer`
 API to retrieve the macro template, and pass it into the template being
 rendered via the dictionary returned by the view.  For example, using a
-:term:`view configuration` via a :class:`pyramid.view.view_config` decorator
+:term:`view configuration` via a :class:`~pyramid.view.view_config` decorator
 that uses a :term:`renderer`:
 
 .. code-block:: python
@@ -595,56 +607,14 @@ Note that I always name my Chameleon ZPT template files with a ``.pt``
 extension and my Chameleon text template files with a ``.txt``
 extension so that these ``svn:ignore`` patterns work.
 
-.. _debug_templates_section:
+.. index::
+   pair: debugging; templates
 
-Nicer Exceptions in Chameleon Templates
----------------------------------------
+Debugging Templates
+-------------------
 
-The exceptions raised by Chameleon templates when a rendering fails
-are sometimes less than helpful.  :app:`Pyramid` allows you to
-configure your application development environment so that exceptions
-generated by Chameleon during template compilation and execution will
-contain nicer debugging information.
-
-.. warning:: template-debugging behavior is not recommended for
-             production sites as it slows renderings; it's usually
-             only desirable during development.
-
-In order to turn on template exception debugging, you can use an
-environment variable setting or a configuration file setting.
-
-To use an environment variable, start your application under a shell
-using the ``PYRAMID_DEBUG_TEMPLATES`` operating system environment
-variable set to ``1``, For example:
-
-.. code-block:: text
-
-  $ PYRAMID_DEBUG_TEMPLATES=1 bin/paster serve myproject.ini
-
-To use a setting in the application ``.ini`` file for the same
-purpose, set the ``debug_templates`` key to ``true`` within the
-application's configuration section, e.g.:
-
-.. code-block:: ini
-  :linenos:
-
-  [app:MyProject]
-  use = egg:MyProject#app
-  debug_templates = true
-
-With template debugging off, a :exc:`NameError` exception resulting
-from rendering a template with an undefined variable
-(e.g. ``${wrong}``) might end like this:
-
-.. code-block:: text
-
-  File "...", in __getitem__
-    raise NameError(key)
-  NameError: wrong
-
-Note that the exception has no information about which template was
-being rendered when the error occured.  But with template debugging
-on, an exception resulting from the same problem might end like so:
+A :exc:`NameError` exception resulting from rendering a template with an
+undefined variable (e.g. ``${wrong}``) might will end like this:
 
 .. code-block:: text
 
@@ -662,16 +632,8 @@ on, an exception resulting from the same problem might end like so:
 
     NameError: wrong
 
-The latter tells you which template the error occurred in, as well as
+The output tells you which template the error occurred in, as well as
 displaying the arguments passed to the template itself.
-
-.. note::
-
-   Turning on ``debug_templates`` has the same effect as using the
-   Chameleon environment variable ``CHAMELEON_DEBUG``.  See `Chameleon
-   Environment Variables
-   <http://chameleon.repoze.org/docs/latest/config.html#environment-variables>`_
-   for more information.
 
 .. index::
    single: template internationalization
@@ -697,10 +659,9 @@ has built-in bindings for the Mako templating system.  The language
 definition documentation for Mako templates is available from `the Mako
 website <http://www.makotemplates.org/>`_.
 
-To use a Mako template, given a :term:`Mako` ZPT template file named
-``foo.mak`` in the ``templates`` subdirectory in your application
-package named ``mypackage``, you can configure the template as a
-:term:`renderer` like so:
+To use a Mako template, given a :term:`Mako` template file named ``foo.mak``
+in the ``templates`` subdirectory in your application package named
+``mypackage``, you can configure the template as a :term:`renderer` like so:
 
 .. code-block:: python
    :linenos:
@@ -724,6 +685,9 @@ in the ``templates`` subdirectory of the ``mypackage`` Python package.  See
 ``mako.directories`` setting and other Mako-related settings that can be
 placed into the application's ``ini`` file.
 
+.. index::
+   single: Mako template (sample)
+
 A Sample Mako Template
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -733,24 +697,20 @@ look like:
 .. code-block:: xml
    :linenos:
 
-    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-    <html xmlns="http://www.w3.org/1999/xhtml"
-          xmlns:tal="http://xml.zope.org/namespaces/tal">
+    <html>
     <head>
-        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <title>${project} Application</title>
     </head>
       <body>
          <h1 class="title">Welcome to <code>${project}</code>, an
 	  application generated by the <a
-	  href="http://docs.pylonsproject.org/projects/pyramid/dev/">pyramid</a> web
-	  application framework.</h1>
+	  href="http://docs.pylonsproject.org/projects/pyramid/current/"
+         >pyramid</a> web application framework.</h1>
       </body>
     </html>
 
 This template doesn't use any advanced features of Mako, only the
-``${squiggly}`` replacement syntax for names that are passed in as
+``${}`` replacement syntax for names that are passed in as
 :term:`renderer globals`.  See the `the Mako documentation
 <http://www.makotemplates.org/>`_ to use more advanced features.
 
@@ -769,7 +729,7 @@ appear immediately without needing to restart the application process.
 environment so that a change to a template will be automatically
 detected, and the template will be reloaded on the next rendering.
 
-.. warning:: auto-template-reload behavior is not recommended for
+.. warning:: Auto-template-reload behavior is not recommended for
              production sites as it slows rendering slightly; it's
              usually only desirable during development.
 
@@ -782,18 +742,18 @@ variable set to ``1``, For example:
 
 .. code-block:: text
 
-  $ PYRAMID_RELOAD_TEMPLATES=1 bin/paster serve myproject.ini
+  $ PYRAMID_RELOAD_TEMPLATES=1 bin/pserve myproject.ini
 
 To use a setting in the application ``.ini`` file for the same
-purpose, set the ``reload_templates`` key to ``true`` within the
+purpose, set the ``pyramid.reload_templates`` key to ``true`` within the
 application's configuration section, e.g.:
 
 .. code-block:: ini
   :linenos:
 
   [app:main]
-  use = egg:MyProject#app
-  reload_templates = true
+  use = egg:MyProject
+  pyramid.reload_templates = true
 
 .. index::
    single: template system bindings

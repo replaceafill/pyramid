@@ -14,7 +14,7 @@ you to ignore relative configuration statement ordering in some
 circumstances.
 
 .. index::
-   single: imperative configuration
+   pair: configuration; conflict detection
 
 .. _conflict_detection:
 
@@ -27,7 +27,7 @@ configured imperatively:
 .. code-block:: python
    :linenos:
 
-   from paste.httpserver import serve
+   from wsgiref.simple_server import make_server
    from pyramid.config import Configurator
    from pyramid.response import Response
 
@@ -38,7 +38,8 @@ configured imperatively:
        config = Configurator()
        config.add_view(hello_world)
        app = config.make_wsgi_app()
-       serve(app, host='0.0.0.0')
+       server = make_server('0.0.0.0', 8080, app)
+       server.serve_forever()
 
 When you start this application, all will be OK.  However, what happens if we
 try to add another view to the configuration with the same set of
@@ -47,7 +48,7 @@ try to add another view to the configuration with the same set of
 .. code-block:: python
    :linenos:
 
-   from paste.httpserver import serve
+   from wsgiref.simple_server import make_server
    from pyramid.config import Configurator
    from pyramid.response import Response
 
@@ -66,7 +67,8 @@ try to add another view to the configuration with the same set of
        config.add_view(goodbye_world, name='hello')
 
        app = config.make_wsgi_app()
-       serve(app, host='0.0.0.0')
+       server = make_server('0.0.0.0', 8080, app)
+       server.serve_forever()
 
 The application now has two conflicting view configuration statements.  When
 we try to start it again, it won't start.  Instead, we'll receive a traceback
@@ -82,16 +84,13 @@ that ends something like this:
        self.commit()
      File "pyramid/pyramid/config.py", line 473, in commit
        self._ctx.execute_actions()
-     File "zope/configuration/config.py", line 600, in execute_actions
-       for action in resolveConflicts(self.actions):
-     File "zope/configuration/config.py", line 1507, in resolveConflicts
-       raise ConfigurationConflictError(conflicts)
-   zope.configuration.config.ConfigurationConflictError: 
+     ... more code ...
+   pyramid.exceptions.ConfigurationConflictError:
            Conflicting configuration actions
-     For: ('view', None, '', None, <InterfaceClass pyramid.interfaces.IView>, 
+     For: ('view', None, '', None, <InterfaceClass pyramid.interfaces.IView>,
            None, None, None, None, None, False, None, None, None)
-    ('app.py', 14, '<module>', 'config.add_view(hello_world)')
-    ('app.py', 17, '<module>', 'config.add_view(hello_world)')
+     Line 14 of file app.py in <module>: 'config.add_view(hello_world)'
+     Line 17 of file app.py in <module>: 'config.add_view(goodbye_world)'
 
 This traceback is trying to tell us:
 
@@ -115,18 +114,18 @@ allowing the circumstance to go unreported, by default Pyramid raises a
 running.
 
 Conflict detection happens for any kind of configuration: imperative
-configuration, :term:`ZCML` configuration, or configuration that results from
-the execution of a :term:`scan`.
+configuration or configuration that results from the execution of a
+:term:`scan`.
 
-.. note:: If you use, ZCML, its conflict detection algorithm is described in
-   :ref:`zcml_conflict_detection`.
+.. _manually_resolving_conflicts:
 
 Manually Resolving Conflicts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are a number of ways to manually resolve conflicts: the "right" way, by
-strategically using :meth:`pyramid.config.Configurator.commit`, or by using
-an "autocommitting" configurator.
+There are a number of ways to manually resolve conflicts: by changing
+registrations to not conflict, by strategically using
+:meth:`pyramid.config.Configurator.commit`, or by using an "autocommitting"
+configurator.
 
 The Right Thing
 +++++++++++++++
@@ -166,7 +165,7 @@ Using ``config.commit()``
 +++++++++++++++++++++++++
 
 You can manually commit a configuration by using the
-:meth:`pyramid.config.Configurator.commit` method between configuration
+:meth:`~pyramid.config.Configurator.commit` method between configuration
 calls.  For example, we prevent conflicts from occurring in the application
 we examined previously as the result of adding a ``commit``.  Here's the
 application that generates conflicts:
@@ -174,7 +173,7 @@ application that generates conflicts:
 .. code-block:: python
    :linenos:
 
-   from paste.httpserver import serve
+   from wsgiref.simple_server import make_server
    from pyramid.config import Configurator
    from pyramid.response import Response
 
@@ -193,7 +192,8 @@ application that generates conflicts:
        config.add_view(goodbye_world, name='hello')
 
        app = config.make_wsgi_app()
-       serve(app, host='0.0.0.0')
+       server = make_server('0.0.0.0', 8080, app)
+       server.serve_forever()
 
 We can prevent the two ``add_view`` calls from conflicting by issuing a call
 to :meth:`~pyramid.config.Configurator.commit` between them:
@@ -201,7 +201,7 @@ to :meth:`~pyramid.config.Configurator.commit` between them:
 .. code-block:: python
    :linenos:
 
-   from paste.httpserver import serve
+   from wsgiref.simple_server import make_server
    from pyramid.config import Configurator
    from pyramid.response import Response
 
@@ -222,11 +222,12 @@ to :meth:`~pyramid.config.Configurator.commit` between them:
        config.add_view(goodbye_world, name='hello')
 
        app = config.make_wsgi_app()
-       serve(app, host='0.0.0.0')
+       server = make_server('0.0.0.0', 8080, app)
+       server.serve_forever()
 
 In the above example we've issued a call to
 :meth:`~pyramid.config.Configurator.commit` between the two ``add_view``
-calls.  :meth:`~pyramid.config.Configurator.commit` will cause any pending
+calls.  :meth:`~pyramid.config.Configurator.commit` will execute any pending
 configuration statements.
 
 Calling :meth:`~pyramid.config.Configurator.commit` is safe at any time.  It
@@ -258,7 +259,7 @@ conflict detection (and :ref:`twophase_config`) is disabled.  Configuration
 statements will be executed immediately, and succeeding statements will
 override preceding ones.
 
-:meth:`pyramid.config.Configurator.commit` has no effect when ``autocommit``
+:meth:`~pyramid.config.Configurator.commit` has no effect when ``autocommit``
 is ``True``.
 
 If you use a Configurator in code that performs unit testing, it's usually a
@@ -270,18 +271,18 @@ unconcerned about conflict detection or two-phase configuration in test code.
 Automatic Conflict Resolution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If your code uses the :meth:`pyramid.config.Configurator.include` method to
+If your code uses the :meth:`~pyramid.config.Configurator.include` method to
 include external configuration, some conflicts are automatically resolved.
 Configuration statements that are made as the result of an "include" will be
 overridden by configuration statements that happen within the caller of
-the "include" method.  See also
+the "include" method.
 
 Automatic conflict resolution supports this goal: if a user wants to reuse a
 Pyramid application, and they want to customize the configuration of this
 application without hacking its code "from outside", they can "include" a
 configuration function from the package and override only some of its
 configuration statements within the code that does the include.  No conflicts
-will be generated by configuration statements within the code which does the
+will be generated by configuration statements within the code that does the
 including, even if configuration statements in the included code would
 conflict if it was moved "up" to the calling code.
 
@@ -294,22 +295,25 @@ These are the methods of the configurator which provide conflict detection:
 :meth:`~pyramid.config.Configurator.add_route`,
 :meth:`~pyramid.config.Configurator.add_renderer`,
 :meth:`~pyramid.config.Configurator.set_request_factory`,
-:meth:`~pyramid.config.Configurator.set_renderer_globals_factory`
-:meth:`~pyramid.config.Configurator.set_locale_negotiator` and
-:meth:`~pyramid.config.Configurator.set_default_permission`.
+:meth:`~pyramid.config.Configurator.set_session_factory`,
+:meth:`~pyramid.config.Configurator.set_request_property`,
+:meth:`~pyramid.config.Configurator.set_root_factory`,
+:meth:`~pyramid.config.Configurator.set_view_mapper`,
+:meth:`~pyramid.config.Configurator.set_authentication_policy`,
+:meth:`~pyramid.config.Configurator.set_authorization_policy`,
+:meth:`~pyramid.config.Configurator.set_renderer_globals_factory`,
+:meth:`~pyramid.config.Configurator.set_locale_negotiator`,
+:meth:`~pyramid.config.Configurator.set_default_permission`,
+:meth:`~pyramid.config.Configurator.add_traverser`,
+:meth:`~pyramid.config.Configurator.add_resource_url_adapter`,
+and :meth:`~pyramid.config.Configurator.add_response_adapter`.
 
-Some other methods of the configurator also indirectly provide conflict
-detection, because they're implemented in terms of conflict-aware methods:
+:meth:`~pyramid.config.Configurator.add_static_view` also indirectly
+provides conflict detection, because it's implemented in terms of the
+conflict-aware ``add_route`` and ``add_view`` methods.
 
-- :meth:`~pyramid.config.Configurator.add_handler`, a frontend for
-  ``add_route`` and ``add_view``.
-
-- :meth:`~pyramid.config.Configurator.add_route` does a second type of
-  conflict detection when a ``view`` parameter is passed (it calls
-  ``add_view``).
-
-- :meth:`~pyramid.config.Configurator.static_view`, a frontend for
-  ``add_route`` and ``add_view``.
+.. index::
+   pair: configuration; including from external sources
 
 .. _including_configuration:
 
@@ -338,8 +342,25 @@ Instead, use :meth:`pyramid.config.Configuration.include`:
 Using ``include`` rather than calling the function directly will allow
 :ref:`automatic_conflict_resolution` to work.
 
+:meth:`~pyramid.config.Configuration.include` can also accept a :term:`module`
+as an argument:
+
+.. code-block:: python
+   :linenos:
+
+   import myapp
+
+   config.include(myapp)
+
+For this to work properly, the ``myapp`` module must contain a callable with
+the special name ``includeme``, which should perform configuration (like the
+``add_routes`` callable we showed above as an example).
+
+:meth:`~pyramid.config.Configuration.include` can also accept a :term:`dotted
+Python name` to a function or a module.
+
 .. note: See :ref:`the_include_tag` for a declarative alternative to
-   :meth:`pyramid.config.Configurator.include`.
+   the :meth:`~pyramid.config.Configurator.include` method.
 
 .. _twophase_config:
 
@@ -357,8 +378,8 @@ to do conflict detection.
 Due to this, for configuration methods that have no internal ordering
 constraints, execution order of configuration method calls is not important.
 For example, the relative ordering of
-:meth:`pyramid.config.Configurator.add_view` and
-:meth:`pyramid.config.Configurator.add_renderer` is unimportant when a
+:meth:`~pyramid.config.Configurator.add_view` and
+:meth:`~pyramid.config.Configurator.add_renderer` is unimportant when a
 non-autocommitting configurator is used.  This code snippet:
 
 .. code-block:: python
@@ -387,9 +408,8 @@ used, two-phase configuration is disabled, and configuration statements must
 be ordered in dependency order.
 
 Some configuration methods, such as
-:meth:`pyramid.config.Configurator.add_route` and
-:meth:`pyramid.config.Configurator.add_handler` have internal ordering
-constraints: they routes they imply require relative ordering.  Such ordering
+:meth:`~pyramid.config.Configurator.add_route` have internal ordering
+constraints: the routes they imply require relative ordering.  Such ordering
 constraints are not absolved by two-phase configuration.  Routes are still
 added in configuration execution order.
 

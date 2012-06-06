@@ -1,7 +1,7 @@
 Copyright, Trademarks, and Attributions
 =======================================
 
-*The Pyramid Web Application Development Framework, Version 1.0*
+*The Pyramid Web Application Development Framework, Version 1.1*
 
 by Chris McDonough
 
@@ -9,11 +9,11 @@ by Chris McDonough
 
 Copyright |copy| 2008-2011, Agendaless Consulting.
 
-.. ISBN-10: 0615345379
+ISBN-10: 0615445675
 
-.. ISBN-13: 978-0-615-34537-6
+ISBN-13: 978-0615445670
 
-.. First print publishing: February, 2010
+First print publishing: February, 2011
 
 All rights reserved.  This material may be copied or distributed only
 subject to the terms and conditions set forth in the `Creative Commons
@@ -52,14 +52,18 @@ Editor:
   Casey Duncan
 
 Contributors:
-
   Ben Bangert, Blaise Laflamme, Rob Miller, Mike Orr, Carlos de la Guardia,
   Paul Everitt, Tres Seaver, John Shipman, Marius Gedminas, Chris Rossi,
   Joachim Krebs, Xavier Spriet, Reed O'Brien, William Chambers, Charlie
-  Choiniere, Jamaludin Ahmad.
+  Choiniere, Jamaludin Ahmad, Graham Higgins, Patricio Paez, Michael
+  Merickel, Eric Ongerth, Niall O'Higgins, Christoph Zwerschke, John
+  Anderson, Atsushi Odagiri, Kirk Strauser, JD Navarro, Joe Dallago,
+  Savoir-Faire Linux, Łukasz Fidosz, Christopher Lambacher, Claus Conrad,
+  Chris Beelby, Phil Jenvey and a number of people with only pseudonyms on
+  GitHub.
 
-.. Cover Designer:
-..   Nat Hardwick of `Electrosoup <http://www.electrosoup.co.uk>`_.
+Cover Designer:
+   Hugues Laflamme of `Kemeneur <http://www.kemeneur.com/>`_.
 
 Used with permission:
 
@@ -69,15 +73,15 @@ Used with permission:
    The :ref:`much_ado_about_traversal_chapter` chapter is adapted,
    with permission, from an article written by Rob Miller.
 
-   The :ref:`wiki2_flow_of_authentication` section was contributed by John
-   Shipman.
+   The :ref:`logging_chapter` is adapted, with permission, from the Pylons
+   documentation logging chapter, originally written by Phil Jenvey.
 
-.. Print Production
-.. ----------------
+Print Production
+----------------
 
-.. The print version of this book was produced using the `Sphinx
-.. <http://sphinx.pocoo.org/>`_ documentation generation system and the
-.. `LaTeX <http://www.latex-project.org/>`_ typesetting system.
+The print version of this book was produced using the `Sphinx
+<http://sphinx.pocoo.org/>`_ documentation generation system and the
+`LaTeX <http://www.latex-project.org/>`_ typesetting system.
 
 Contacting The Publisher
 ------------------------

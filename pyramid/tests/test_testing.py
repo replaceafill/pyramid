@@ -1,5 +1,5 @@
-
 import unittest
+from pyramid.compat import text_
 
 class TestBase(unittest.TestCase):
     def setUp(self):
@@ -27,7 +27,7 @@ class Test_registerDummySecurityPolicy(TestBase):
         from pyramid.interfaces import IAuthorizationPolicy
         ut = self.registry.getUtility(IAuthenticationPolicy)
         from pyramid.testing import DummySecurityPolicy
-        self.failUnless(isinstance(ut, DummySecurityPolicy))
+        self.assertTrue(isinstance(ut, DummySecurityPolicy))
         ut = self.registry.getUtility(IAuthorizationPolicy)
         self.assertEqual(ut.userid, 'user')
         self.assertEqual(ut.groupids, ('group1', 'group2'))
@@ -35,28 +35,30 @@ class Test_registerDummySecurityPolicy(TestBase):
 
 class Test_registerResources(TestBase):
     def test_it(self):
-        ob1 = object()
-        ob2 = object()
+        class Dummy:
+            pass
+        ob1 = Dummy()
+        ob2 = Dummy()
         resources = {'/ob1':ob1, '/ob2':ob2}
         from pyramid import testing
         testing.registerResources(resources)
         from pyramid.interfaces import ITraverser
         adapter = self.registry.getAdapter(None, ITraverser)
-        result = adapter({'PATH_INFO':'/ob1'})
+        result = adapter(DummyRequest({'PATH_INFO':'/ob1'}))
         self.assertEqual(result['context'], ob1)
         self.assertEqual(result['view_name'], '')
         self.assertEqual(result['subpath'], ())
-        self.assertEqual(result['traversed'], (u'ob1',))
+        self.assertEqual(result['traversed'], (text_('ob1'),))
         self.assertEqual(result['virtual_root'], ob1)
         self.assertEqual(result['virtual_root_path'], ())
-        result = adapter({'PATH_INFO':'/ob2'})
+        result = adapter(DummyRequest({'PATH_INFO':'/ob2'}))
         self.assertEqual(result['context'], ob2)
         self.assertEqual(result['view_name'], '')
         self.assertEqual(result['subpath'], ())
-        self.assertEqual(result['traversed'], (u'ob2',))
+        self.assertEqual(result['traversed'], (text_('ob2'),))
         self.assertEqual(result['virtual_root'], ob2)
         self.assertEqual(result['virtual_root_path'], ())
-        self.assertRaises(KeyError, adapter, {'PATH_INFO':'/ob3'})
+        self.assertRaises(KeyError, adapter, DummyRequest({'PATH_INFO':'/ob3'}))
         from pyramid.traversal import find_resource
         self.assertEqual(find_resource(None, '/ob1'), ob1)
 
@@ -65,7 +67,7 @@ class Test_registerTemplateRenderer(TestBase):
         from pyramid import testing
         renderer = testing.registerTemplateRenderer('templates/foo')
         from pyramid.testing import DummyTemplateRenderer
-        self.failUnless(isinstance(renderer, DummyTemplateRenderer))
+        self.assertTrue(isinstance(renderer, DummyTemplateRenderer))
         from pyramid.renderers import render_to_response
         render_to_response('templates/foo', dict(foo=1, bar=2))
         renderer.assert_(foo=1)
@@ -116,7 +118,7 @@ class Test_registerView(TestBase):
         from pyramid import testing
         view = testing.registerView('moo.html')
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         from pyramid.view import render_view_to_response
         request = DummyRequest()
         request.registry = self.registry
@@ -127,12 +129,12 @@ class Test_registerView(TestBase):
         from pyramid import testing
         view = testing.registerView('moo.html', 'yo')
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         from pyramid.view import render_view_to_response
         request = DummyRequest()
         request.registry = self.registry
         response = render_view_to_response(None, request, 'moo.html')
-        self.assertEqual(response.body, 'yo')
+        self.assertEqual(response.body, b'yo')
 
     def test_registerView_custom(self):
         from pyramid import testing
@@ -141,26 +143,26 @@ class Test_registerView(TestBase):
             return Response('123')
         view = testing.registerView('moo.html', view=view)
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         from pyramid.view import render_view_to_response
         request = DummyRequest()
         request.registry = self.registry
         response = render_view_to_response(None, request, 'moo.html')
-        self.assertEqual(response.body, '123')
+        self.assertEqual(response.body, b'123')
 
     def test_registerView_with_permission_denying(self):
         from pyramid import testing
-        from pyramid.exceptions import Forbidden
+        from pyramid.httpexceptions import HTTPForbidden
         def view(context, request):
             """ """
         view = testing.registerView('moo.html', view=view, permission='bar')
         testing.registerDummySecurityPolicy(permissive=False)
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         from pyramid.view import render_view_to_response
         request = DummyRequest()
         request.registry = self.registry
-        self.assertRaises(Forbidden, render_view_to_response,
+        self.assertRaises(HTTPForbidden, render_view_to_response,
                           None, request, 'moo.html')
 
     def test_registerView_with_permission_denying2(self):
@@ -171,7 +173,7 @@ class Test_registerView(TestBase):
         view = testing.registerView('moo.html', view=view, permission='bar')
         testing.registerDummySecurityPolicy(permissive=False)
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         result = view_execution_permitted(None, None, 'moo.html')
         self.assertEqual(result, False)
 
@@ -183,12 +185,12 @@ class Test_registerView(TestBase):
         view = testing.registerView('moo.html', view=view, permission='bar')
         testing.registerDummySecurityPolicy(permissive=True)
         import types
-        self.failUnless(isinstance(view, types.FunctionType))
+        self.assertTrue(isinstance(view, types.FunctionType))
         from pyramid.view import render_view_to_response
         request = DummyRequest()
         request.registry = self.registry
         result = render_view_to_response(None, request, 'moo.html')
-        self.assertEqual(result.app_iter, ['123'])
+        self.assertEqual(result.app_iter, [b'123'])
 
 
 class Test_registerAdapter(TestBase):
@@ -222,12 +224,12 @@ class Test_registerAdapter(TestBase):
 
 class Test_registerUtility(TestBase):
     def test_registerUtility(self):
-        from zope.interface import implements
+        from zope.interface import implementer
         from zope.interface import Interface
         class iface(Interface):
             pass
+        @implementer(iface)
         class impl:
-            implements(iface)
             def __call__(self):
                 return 'foo'
         utility = impl()
@@ -251,15 +253,16 @@ class Test_registerSubscriber(TestBase):
 
 class Test_registerRoute(TestBase):
     def test_registerRoute(self):
-        from pyramid.url import route_url
+        from pyramid.request import Request
         from pyramid.interfaces import IRoutesMapper
         from pyramid.testing import registerRoute
         registerRoute(':pagename', 'home', DummyFactory)
         mapper = self.registry.getUtility(IRoutesMapper)
         self.assertEqual(len(mapper.routelist), 1)
-        request = DummyRequest()
-        self.assertEqual(route_url('home', request, pagename='abc'),
-                         'http://example.com/abc')
+        request = Request.blank('/')
+        request.registry = self.registry
+        self.assertEqual(request.route_url('home', pagename='abc'),
+                         'http://localhost/abc')
 
 class Test_registerSettings(TestBase):
     def test_registerSettings(self):
@@ -355,9 +358,9 @@ class TestDummyResource(unittest.TestCase):
         self.assertEqual(resource['abc'], dummy)
         self.assertEqual(resource.get('abc'), dummy)
         self.assertRaises(KeyError, resource.__getitem__, 'none')
-        self.failUnless('abc' in resource)
+        self.assertTrue('abc' in resource)
         del resource['abc']
-        self.failIf('abc' in resource)
+        self.assertFalse('abc' in resource)
         self.assertEqual(resource.get('abc', 'foo'), 'foo')
         self.assertEqual(resource.get('abc'), None)
 
@@ -379,9 +382,10 @@ class TestDummyResource(unittest.TestCase):
         resource = self._makeOne()
         resource['abc'] = Dummy()
         resource['def'] = Dummy()
-        self.assertEqual(resource.values(), resource.subs.values())
-        self.assertEqual(resource.items(), resource.subs.items())
-        self.assertEqual(resource.keys(), resource.subs.keys())
+        L = list
+        self.assertEqual(L(resource.values()), L(resource.subs.values()))
+        self.assertEqual(L(resource.items()), L(resource.subs.items()))
+        self.assertEqual(L(resource.keys()), L(resource.subs.keys()))
         self.assertEqual(len(resource), 2)
 
     def test_nonzero(self):
@@ -390,7 +394,7 @@ class TestDummyResource(unittest.TestCase):
 
     def test_ctor_with__provides__(self):
         resource = self._makeOne(__provides__=IDummy)
-        self.failUnless(IDummy.providedBy(resource))
+        self.assertTrue(IDummy.providedBy(resource))
 
 class TestDummyRequest(unittest.TestCase):
     def _getTargetClass(self):
@@ -488,6 +492,63 @@ class TestDummyRequest(unittest.TestCase):
         request = self._makeOne()
         request.add_response_callback(1)
         self.assertEqual(request.response_callbacks, [1])
+
+    def test_registry_is_config_registry_when_setup_is_called_after_ctor(self):
+        # see https://github.com/Pylons/pyramid/issues/165
+        from pyramid.registry import Registry
+        from pyramid.config import Configurator
+        request = self._makeOne()
+        try:
+            registry = Registry('this_test')
+            config = Configurator(registry=registry)
+            config.begin()
+            self.assertTrue(request.registry is registry)
+        finally:
+            config.end()
+
+    def test_set_registry(self):
+        request = self._makeOne()
+        request.registry = 'abc'
+        self.assertEqual(request.registry, 'abc')
+
+    def test_del_registry(self):
+        # see https://github.com/Pylons/pyramid/issues/165
+        from pyramid.registry import Registry
+        from pyramid.config import Configurator
+        request = self._makeOne()
+        request.registry = 'abc'
+        self.assertEqual(request.registry, 'abc')
+        del request.registry
+        try:
+            registry = Registry('this_test')
+            config = Configurator(registry=registry)
+            config.begin()
+            self.assertTrue(request.registry is registry)
+        finally:
+            config.end()
+
+    def test_response_with_responsefactory(self):
+        from pyramid.registry import Registry
+        from pyramid.interfaces import IResponseFactory
+        registry = Registry('this_test')
+        class ResponseFactory(object):
+            pass
+        registry.registerUtility(ResponseFactory, IResponseFactory)
+        request = self._makeOne()
+        request.registry = registry
+        resp = request.response
+        self.assertEqual(resp.__class__, ResponseFactory)
+        self.assertTrue(request.response is resp) # reified
+
+    def test_response_without_responsefactory(self):
+        from pyramid.registry import Registry
+        from pyramid.response import Response
+        registry = Registry('this_test')
+        request = self._makeOne()
+        request.registry = registry
+        resp = request.response
+        self.assertEqual(resp.__class__, Response)
+        self.assertTrue(request.response is resp) # reified
         
 
 class TestDummyTemplateRenderer(unittest.TestCase):
@@ -516,7 +577,7 @@ class TestDummyTemplateRenderer(unittest.TestCase):
         renderer({'a':1, 'b':2})
         self.assertRaises(AssertionError, renderer.assert_, c=1)
         self.assertRaises(AssertionError, renderer.assert_, b=3)
-        self.failUnless(renderer.assert_(a=1, b=2))
+        self.assertTrue(renderer.assert_(a=1, b=2))
         
     def test_nondefault_string_response(self):
         renderer = self._makeOne('abc')
@@ -528,63 +589,73 @@ class Test_setUp(unittest.TestCase):
         from pyramid.testing import setUp
         return setUp(**kw)
 
+    def tearDown(self):
+        from pyramid.threadlocal import manager
+        manager.clear()
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
+            getSiteManager.reset()
+
+    def _getSM(self):
+        try:
+            from zope.component import getSiteManager
+        except ImportError: # pragma: no cover
+            getSiteManager = None
+        return getSiteManager
+
+    def _assertSMHook(self, hook):
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
+            result = getSiteManager.sethook(None)
+            self.assertEqual(result, hook)
+
     def test_it_defaults(self):
         from pyramid.threadlocal import manager
         from pyramid.threadlocal import get_current_registry
         from pyramid.registry import Registry
-        from zope.component import getSiteManager
         old = True
         manager.push(old)
-        try:
-            config = self._callFUT()
-            current = manager.get()
-            self.failIf(current is old)
-            self.assertEqual(config.registry, current['registry'])
-            self.assertEqual(current['registry'].__class__, Registry)
-            self.assertEqual(current['request'], None)
-        finally:
-            result = getSiteManager.sethook(None)
-            self.assertEqual(result, get_current_registry)
-            getSiteManager.reset()
-            manager.clear()
+        config = self._callFUT()
+        current = manager.get()
+        self.assertFalse(current is old)
+        self.assertEqual(config.registry, current['registry'])
+        self.assertEqual(current['registry'].__class__, Registry)
+        self.assertEqual(current['request'], None)
+        self._assertSMHook(get_current_registry)
 
     def test_it_with_registry(self):
         from pyramid.registry import Registry
-        from zope.component import getSiteManager
         from pyramid.threadlocal import manager
         registry = Registry()
-        try:
-            self._callFUT(registry=registry)
-            current = manager.get()
-            self.assertEqual(current['registry'], registry)
-        finally:
-            getSiteManager.reset()
-            manager.clear()
+        self._callFUT(registry=registry)
+        current = manager.get()
+        self.assertEqual(current['registry'], registry)
             
     def test_it_with_request(self):
-        from zope.component import getSiteManager
         from pyramid.threadlocal import manager
         request = object()
-        try:
-            self._callFUT(request=request)
-            current = manager.get()
-            self.assertEqual(current['request'], request)
-        finally:
-            getSiteManager.reset()
-            manager.clear()
+        self._callFUT(request=request)
+        current = manager.get()
+        self.assertEqual(current['request'], request)
 
     def test_it_with_hook_zca_false(self):
-        from zope.component import getSiteManager
-        from pyramid.threadlocal import manager
         from pyramid.registry import Registry
         registry = Registry()
-        try:
-            self._callFUT(registry=registry, hook_zca=False)
+        self._callFUT(registry=registry, hook_zca=False)
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
             sm = getSiteManager()
-            self.failIf(sm is registry)
-        finally:
-            getSiteManager.reset()
-            manager.clear()
+            self.assertFalse(sm is registry)
+
+    def test_it_with_settings_passed_explicit_registry(self):
+        from pyramid.registry import Registry
+        registry = Registry()
+        self._callFUT(registry=registry, hook_zca=False, settings=dict(a=1))
+        self.assertEqual(registry.settings['a'], 1)
+        
+    def test_it_with_settings_passed_implicit_registry(self):
+        config = self._callFUT(hook_zca=False, settings=dict(a=1))
+        self.assertEqual(config.registry.settings['a'], 1)
 
 class Test_cleanUp(Test_setUp):
     def _callFUT(self, *arg, **kw):
@@ -596,24 +667,48 @@ class Test_tearDown(unittest.TestCase):
         from pyramid.testing import tearDown
         return tearDown(**kw)
 
+    def tearDown(self):
+        from pyramid.threadlocal import manager
+        manager.clear()
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
+            getSiteManager.reset()
+
+    def _getSM(self):
+        try:
+            from zope.component import getSiteManager
+        except ImportError: # pragma: no cover
+            getSiteManager = None
+        return getSiteManager
+
+    def _assertSMHook(self, hook):
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
+            result = getSiteManager.sethook(None)
+            self.assertEqual(result, hook)
+
+    def _setSMHook(self, hook):
+        getSiteManager = self._getSM()
+        if getSiteManager is not None:
+            getSiteManager.sethook(hook)
+
     def test_defaults(self):
         from pyramid.threadlocal import manager
-        from zope.component import getSiteManager
         registry = DummyRegistry()
         old = {'registry':registry}
         hook = lambda *arg: None
         try:
-            getSiteManager.sethook(hook)
+            self._setSMHook(hook)
             manager.push(old)
             self._callFUT()
             current = manager.get()
             self.assertNotEqual(current, old)
             self.assertEqual(registry.inited, 2)
         finally:
-            result = getSiteManager.sethook(None)
-            self.assertNotEqual(result, hook)
-            getSiteManager.reset()
-            manager.clear()
+            getSiteManager = self._getSM()
+            if getSiteManager is not None:
+                result = getSiteManager.sethook(None)
+                self.assertNotEqual(result, hook)
 
     def test_registry_cannot_be_inited(self):
         from pyramid.threadlocal import manager
@@ -632,17 +727,12 @@ class Test_tearDown(unittest.TestCase):
             manager.clear()
 
     def test_unhook_zc_false(self):
-        from pyramid.threadlocal import manager
-        from zope.component import getSiteManager
         hook = lambda *arg: None
         try:
-            getSiteManager.sethook(hook)
+            self._setSMHook(hook)
             self._callFUT(unhook_zca=False)
         finally:
-            result = getSiteManager.sethook(None)
-            self.assertEqual(result, hook)
-            getSiteManager.reset()
-            manager.clear()
+            self._assertSMHook(hook)
 
 class TestDummyRendererFactory(unittest.TestCase):
     def _makeOne(self, name, factory):
@@ -744,7 +834,7 @@ class TestDummySession(unittest.TestCase):
         session = self._makeOne()
         session['a'] = 1
         self.assertEqual(session.invalidate(), None)
-        self.failIf('a' in session)
+        self.assertFalse('a' in session)
 
     def test_flash_default(self):
         session = self._makeOne()
@@ -802,20 +892,31 @@ class TestDummySession(unittest.TestCase):
         session['_csrft_'] = 'token'
         token = session.get_csrf_token()
         self.assertEqual(token, 'token')
-        self.failUnless('_csrft_' in session)
+        self.assertTrue('_csrft_' in session)
 
+    def test_get_csrf_token_generates_token(self):
+        session = self._makeOne()
+        token = session.get_csrf_token()
+        self.assertNotEqual(token, None)
+        self.assertTrue(len(token) >= 1)
 
 from zope.interface import Interface
-from zope.interface import implements
+from zope.interface import implementer
         
 class IDummy(Interface):
     pass
 
+@implementer(IDummy)
 class DummyEvent:
-    implements(IDummy)
+    pass
+    
 
 class DummyRequest:
     application_url = 'http://example.com'
+    def __init__(self, environ=None):
+        if environ is None:
+            environ = {}
+        self.environ = environ
 
 class DummyFactory:
     def __init__(self, environ):

@@ -1,70 +1,14 @@
-from zope.configuration.exceptions import ConfigurationError as ZCE
-from zope.interface import implements
+from pyramid.httpexceptions import (
+    HTTPNotFound,
+    HTTPForbidden,
+    )
 
-from pyramid.decorator import reify
-from pyramid.interfaces import IExceptionResponse
-import cgi
+NotFound = HTTPNotFound # bw compat
+Forbidden = HTTPForbidden # bw compat
 
-class ExceptionResponse(Exception):
-    """ Abstract class to support behaving as a WSGI response object """
-    implements(IExceptionResponse)
-    status = None
+CR = '\n'
 
-    def __init__(self, message=''):
-        Exception.__init__(self, message) # B / C
-        self.message = message
-
-    @reify # defer execution until asked explicitly
-    def app_iter(self):
-         return [
-             """
-             <html>
-             <title>%s</title>
-             <body>
-             <h1>%s</h1>
-             <code>%s</code>
-             </body>
-             </html>
-             """ % (self.status, self.status, cgi.escape(self.message))
-             ]
-
-    @reify # defer execution until asked explicitly
-    def headerlist(self):
-        return [
-            ('Content-Length', str(len(self.app_iter[0]))),
-            ('Content-Type', 'text/html')
-            ]
-        
-        
-class Forbidden(ExceptionResponse):
-    """
-    Raise this exception within :term:`view` code to immediately
-    return the :term:`forbidden view` to the invoking user.  Usually
-    this is a basic ``401`` page, but the forbidden view can be
-    customized as necessary.  See :ref:`changing_the_forbidden_view`.
-
-    This exception's constructor accepts a single positional argument, which
-    should be a string.  The value of this string will be placed onto the
-    request by the router as the ``exception_message`` attribute, for
-    availability to the :term:`Forbidden View`.
-    """
-    status = '401 Unauthorized'
-
-class NotFound(ExceptionResponse):
-    """
-    Raise this exception within :term:`view` code to immediately
-    return the :term:`Not Found view` to the invoking user.  Usually
-    this is a basic ``404`` page, but the Not Found view can be
-    customized as necessary.  See :ref:`changing_the_notfound_view`.
-
-    This exception's constructor accepts a single positional argument, which
-    should be a string.  The value of this string will be placed into the WSGI
-    environment by the router as the ``exception_message`` attribute, for
-    availability to the :term:`Not Found View`.
-    """
-    status = '404 Not Found'
-
-class PredicateMismatch(NotFound):
+class PredicateMismatch(HTTPNotFound):
     """
     Internal exception (not an API) raised by multiviews when no
     view matches.  This exception subclasses the ``NotFound``
@@ -84,7 +28,35 @@ class URLDecodeError(UnicodeDecodeError):
     decoded.
     """
 
-class ConfigurationError(ZCE):
+class ConfigurationError(Exception):
     """ Raised when inappropriate input values are supplied to an API
     method of a :term:`Configurator`"""
 
+class ConfigurationConflictError(ConfigurationError):
+    """ Raised when a configuration conflict is detected during action
+    processing"""
+
+    def __init__(self, conflicts):
+        self._conflicts = conflicts
+
+    def __str__(self):
+        r = ["Conflicting configuration actions"]
+        items = sorted(self._conflicts.items())
+        for discriminator, infos in items:
+            r.append("  For: %s" % (discriminator, ))
+            for info in infos:
+                for line in str(info).rstrip().split(CR):
+                    r.append("    "+line)
+
+        return CR.join(r)
+
+
+class ConfigurationExecutionError(ConfigurationError):
+    """An error occurred during execution of a configuration action
+    """
+
+    def __init__(self, etype, evalue, info):
+        self.etype, self.evalue, self.info = etype, evalue, info
+
+    def __str__(self):
+        return "%s: %s\n  in:\n  %s" % (self.etype, self.evalue, self.info)

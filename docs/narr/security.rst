@@ -6,13 +6,14 @@
 Security
 ========
 
-:app:`Pyramid` provides an optional declarative authorization system that
-prevents a :term:`view` from being invoked when the user represented by
-credentials in the :term:`request` does not have an appropriate level of
-access when a particular resource is the :term:`context`.  Here's how it
-works at a high level:
+:app:`Pyramid` provides an optional declarative authorization system
+that can prevent a :term:`view` from being invoked based on an
+:term:`authorization policy`. Before a view is invoked, the
+authorization system can use the credentials in the :term:`request`
+along with the :term:`context` resource to determine if access will be
+allowed.  Here's how it works at a high level:
 
-- A :term:`request` is generated when a user visits our application.
+- A :term:`request` is generated when a user visits the application.
 
 - Based on the request, a :term:`context` resource is located through
   :term:`resource location`.  A context is located differently depending on
@@ -40,6 +41,15 @@ works at a high level:
 - If the authorization policy denies access, the view callable is not
   invoked; instead the :term:`forbidden view` is invoked.
 
+Security in :app:`Pyramid`, unlike many systems, cleanly and explicitly
+separates authentication and authorization. Authentication is merely the
+mechanism by which credentials provided in the :term:`request` are
+resolved to one or more :term:`principal` identifiers. These identifiers
+represent the users and groups in effect during the request.
+Authorization then determines access based on the :term:`principal`
+identifiers, the :term:`view callable` being invoked, and the
+:term:`context` resource.
+
 Authorization is enabled by modifying your application to include an
 :term:`authentication policy` and :term:`authorization policy`.
 :app:`Pyramid` comes with a variety of implementations of these
@@ -49,6 +59,8 @@ policies.
 
 .. index::
    single: authorization policy
+
+.. _enabling_authorization_policy:
 
 Enabling an Authorization Policy
 --------------------------------
@@ -61,16 +73,15 @@ to enable an authorization policy.
 Enabling an Authorization Policy Imperatively
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Passing an ``authorization_policy`` argument to the constructor of the
-:class:`pyramid.config.Configurator` class enables an
-authorization policy.
+Use the :meth:`~pyramid.config.Configurator.set_authorization_policy` method
+of the :class:`~pyramid.config.Configurator` to enable an authorization
+policy.
 
-You must also enable an :term:`authentication policy` in order to
-enable the authorization policy.  This is because authorization, in
-general, depends upon authentication.  Use the
-``authentication_policy`` argument to the
-:class:`pyramid.config.Configurator` class during
-application setup to specify an authentication policy.
+You must also enable an :term:`authentication policy` in order to enable the
+authorization policy.  This is because authorization, in general, depends
+upon authentication.  Use the
+:meth:`~pyramid.config.Configurator.set_authentication_policy` and method
+during application setup to specify the authentication policy.
 
 For example:
 
@@ -83,13 +94,14 @@ For example:
    from pyramid.authorization import ACLAuthorizationPolicy
    authentication_policy = AuthTktAuthenticationPolicy('seekrit')
    authorization_policy = ACLAuthorizationPolicy()
-   config = Configurator(authentication_policy=authentication_policy,
-                         authorization_policy=authorization_policy)
+   config = Configurator()
+   config.set_authentication_policy(authentication_policy)
+   config.set_authorization_policy(authorization_policy)
 
 .. note:: the ``authentication_policy`` and ``authorization_policy``
-   arguments may also be passed to the Configurator as :ref:`dotted
-   Python name` values, each representing the dotted name path to a
-   suitable implementation global defined at Python module scope.
+   arguments may also be passed to their respective methods mentioned above
+   as :term:`dotted Python name` values, each representing the dotted name
+   path to a suitable implementation global defined at Python module scope.
 
 The above configuration enables a policy which compares the value of an "auth
 ticket" cookie passed in the request's environment which contains a reference
@@ -98,16 +110,13 @@ to a single :term:`principal` against the principals present in any
 :term:`view`.
 
 While it is possible to mix and match different authentication and
-authorization policies, it is an error to pass an authentication
-policy without the authorization policy or vice versa to a
-:term:`Configurator` constructor.
+authorization policies, it is an error to configure a Pyramid application
+with an authentication policy but without the authorization policy or vice
+versa.  If you do this, you'll receive an error at application startup time.
 
 See also the :mod:`pyramid.authorization` and
 :mod:`pyramid.authentication` modules for alternate implementations
 of authorization and authentication policies.  
-
-You can also enable a security policy declaratively via ZCML.  See
-:ref:`zcml_authorization_policy`.
 
 .. index::
    single: permissions
@@ -154,9 +163,6 @@ may be performed via the ``@view_config`` decorator:
        """ Add blog entry code goes here """
        pass
 
-Or the same thing can be done using the ``permission`` attribute of the ZCML
-:ref:`view_directive` directive.
-
 As a result of any of these various view configuration statements, if an
 authorization policy is in place when the view callable is found during
 normal application operations, the requesting user will need to possess the
@@ -164,13 +170,16 @@ normal application operations, the requesting user will need to possess the
 to invoke the ``blog_entry_add_view`` view.  If he does not, the
 :term:`Forbidden view` will be invoked.
 
+.. index::
+   pair: permission; default
+
 .. _setting_a_default_permission:
 
 Setting a Default Permission
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If a permission is not supplied to a view configuration, the
-registered view always be executable by entirely anonymous users: any
+If a permission is not supplied to a view configuration, the registered
+view will always be executable by entirely anonymous users: any
 authorization policy in effect is ignored.
 
 In support of making it easier to configure applications which are
@@ -179,32 +188,32 @@ In support of making it easier to configure applications which are
 the permission string to all view registrations which don't otherwise
 name a ``permission`` argument.
 
-These APIs are in support of configuring a default permission for an
-application:
-
-- The ``default_permission`` constructor argument to the
-  :mod:`pyramid.config.Configurator` constructor.
-
-- The
-  :meth:`pyramid.config.Configurator.set_default_permission`
-  method.
-
-- The :ref:`default_permission_directive` ZCML directive.
+The :meth:`pyramid.config.Configurator.set_default_permission` method
+supports configuring a default permission for an application.
 
 When a default permission is registered:
 
-- if a view configuration names an explicit ``permission``, the default
+- If a view configuration names an explicit ``permission``, the default
   permission is ignored for that view registration, and the
   view-configuration-named permission is used.
 
-- if a view configuration names an explicit permission as the string
-  ``__no_permission_required__``, the default permission is ignored,
-  and the view is registered *without* a permission (making it
+- If a view configuration names the permission
+  :data:`pyramid.security.NO_PERMISSION_REQUIRED`, the default permission
+  is ignored, and the view is registered *without* a permission (making it
   available to all callers regardless of their credentials).
+
+.. warning::
+
+   When you register a default permission, *all* views (even :term:`exception
+   view` views) are protected by a permission.  For all views which are truly
+   meant to be anonymously accessible, you will need to associate the view's
+   configuration with the :data:`pyramid.security.NO_PERMISSION_REQUIRED`
+   permission.
 
 .. index::
    single: ACL
    single: access control list
+   pair: resource; ACL
 
 .. _assigning_acls:
 
@@ -304,9 +313,7 @@ authentication system provides group information and the effective
 :term:`authentication policy` policy is written to respect group information.
 For example, the
 :class:`pyramid.authentication.RepozeWho1AuthenicationPolicy` respects group
-information if you configure it with a ``callback``.  See
-:ref:`authentication_policies_directives_section` for more information about
-the ``callback`` attribute.
+information if you configure it with a ``callback``.
 
 Each ACE in an ACL is processed by an authorization policy *in the
 order dictated by the ACL*.  So if you have an ACL like this:
@@ -455,7 +462,7 @@ parents left.
 In order to allow the security machinery to perform ACL inheritance, resource
 objects must provide *location-awareness*.  Providing *location-awareness*
 means two things: the root object in the resource tree must have a
-``_name__`` attribute and a ``__parent__`` attribute.
+``__name__`` attribute and a ``__parent__`` attribute.
 
 .. code-block:: python
    :linenos:
@@ -500,7 +507,7 @@ example:
 
 .. code-block:: text
 
-  $ PYRAMID_DEBUG_AUTHORIZATION=1 bin/paster serve myproject.ini
+  $ PYRAMID_DEBUG_AUTHORIZATION=1 bin/pserve myproject.ini
 
 When any authorization takes place during a top-level view rendering,
 a message will be logged to the console (to stderr) about what ACE in
@@ -508,15 +515,15 @@ which ACL permitted or denied the authorization based on
 authentication information.
 
 This behavior can also be turned on in the application ``.ini`` file
-by setting the ``debug_authorization`` key to ``true`` within the
+by setting the ``pyramid.debug_authorization`` key to ``true`` within the
 application's configuration section, e.g.:
 
 .. code-block:: ini
   :linenos:
 
   [app:main]
-  use = egg:MyProject#app
-  debug_authorization = true
+  use = egg:MyProject
+  pyramid.debug_authorization = true
 
 With this debug flag turned on, the response sent to the browser will
 also contain security debugging information in its body.
@@ -537,7 +544,7 @@ one of :data:`pyramid.security.ACLAllowed`,
 ``msg`` attribute, which is a string indicating why the permission was
 denied or allowed.  Introspecting this information in the debugger or
 via print statements when a call to
-:func:`pyramid.security.has_permission` fails is often useful.
+:func:`~pyramid.security.has_permission` fails is often useful.
 
 .. index::
    single: authentication policy (creating)
@@ -557,17 +564,30 @@ that implements the following interface:
 .. code-block:: python
    :linenos:
 
-   class AuthenticationPolicy(object):
+   class IAuthenticationPolicy(object):
        """ An object representing a Pyramid authentication policy. """
+
        def authenticated_userid(self, request):
            """ Return the authenticated userid or ``None`` if no
-           authenticated userid can be found. """
+           authenticated userid can be found. This method of the policy 
+           should ensure that a record exists in whatever persistent store is 
+           used related to the user (the user should not have been deleted); 
+           if a record associated with the current id does not exist in a 
+           persistent store, it should return ``None``."""
+
+       def unauthenticated_userid(self, request):
+           """ Return the *unauthenticated* userid.  This method performs the
+           same duty as ``authenticated_userid`` but is permitted to return the
+           userid based only on data present in the request; it needn't (and
+           shouldn't) check any persistent store to ensure that the user record
+           related to the request userid exists."""
 
        def effective_principals(self, request):
            """ Return a sequence representing the effective principals
            including the userid and any groups belonged to by the current
-           user, including 'system' groups such as Everyone and
-           Authenticated. """
+           user, including 'system' groups such as
+           ``pyramid.security.Everyone`` and
+           ``pyramid.security.Authenticated``. """
 
        def remember(self, request, principal, **kw):
            """ Return a set of headers suitable for 'remembering' the
@@ -580,8 +600,8 @@ that implements the following interface:
            current user on subsequent requests. """
 
 After you do so, you can pass an instance of such a class into the
-:class:`pyramid.config.Configurator` class at configuration
-time as ``authentication_policy`` to use it.
+:class:`~pyramid.config.Configurator.set_authentication_policy` method
+configuration time to use it.
 
 .. index::
    single: authorization policy (creating)
@@ -591,18 +611,16 @@ time as ``authentication_policy`` to use it.
 Creating Your Own Authorization Policy
 --------------------------------------
 
-An authorization policy is a policy that allows or denies access after
-a user has been authenticated.  By default, :app:`Pyramid` will use
-the :class:`pyramid.authorization.ACLAuthorizationPolicy` if an
-authentication policy is activated and an authorization policy isn't
-otherwise specified.
+An authorization policy is a policy that allows or denies access after a user
+has been authenticated.  Most :app:`Pyramid` applications will use the
+default :class:`pyramid.authorization.ACLAuthorizationPolicy`.
 
-In some cases, it's useful to be able to use a different
+However, in some cases, it's useful to be able to use a different
 authorization policy than the default
-:class:`pyramid.authorization.ACLAuthorizationPolicy`.  For
-example, it might be desirable to construct an alternate authorization
-policy which allows the application to use an authorization mechanism
-that does not involve :term:`ACL` objects.
+:class:`~pyramid.authorization.ACLAuthorizationPolicy`.  For example, it
+might be desirable to construct an alternate authorization policy which
+allows the application to use an authorization mechanism that does not
+involve :term:`ACL` objects.
 
 :app:`Pyramid` ships with only a single default authorization
 policy, so you'll need to create your own if you'd like to use a
@@ -616,13 +634,19 @@ following interface:
     class IAuthorizationPolicy(object):
         """ An object representing a Pyramid authorization policy. """
         def permits(self, context, principals, permission):
-            """ Return True if any of the principals is allowed the
-            permission in the current context, else return False """
+            """ Return ``True`` if any of the ``principals`` is allowed the
+            ``permission`` in the current ``context``, else return ``False``
+            """
             
         def principals_allowed_by_permission(self, context, permission):
-            """ Return a set of principal identifiers allowed by the 
-                permission """
+            """ Return a set of principal identifiers allowed by the
+            ``permission`` in ``context``.  This behavior is optional; if you
+            choose to not implement it you should define this method as
+            something which raises a ``NotImplementedError``.  This method
+            will only be called when the
+            ``pyramid.security.principals_allowed_by_permission`` API is
+            used."""
 
 After you do so, you can pass an instance of such a class into the
-:class:`pyramid.config.Configurator` class at configuration
-time as ``authorization_policy`` to use it.
+:class:`~pyramid.config.Configurator.set_authorization_policy` method at
+configuration time to use it.

@@ -31,33 +31,36 @@ Narrative Documentation
    narr/configuration
    narr/firstapp
    narr/project
+   narr/startup
+   narr/router
    narr/urldispatch
-   narr/muchadoabouttraversal
-   narr/traversal
    narr/views
    narr/renderers
    narr/templates
    narr/viewconfig
-   narr/resources
    narr/assets
    narr/webob
    narr/sessions
-   narr/security
-   narr/hybrid
-   narr/i18n
-   narr/vhosting
    narr/events
    narr/environment
+   narr/logging
+   narr/paste
+   narr/commandline
+   narr/i18n
+   narr/vhosting
    narr/testing
+   narr/resources
+   narr/muchadoabouttraversal
+   narr/traversal
+   narr/security
+   narr/hybrid
    narr/hooks
-   narr/advconfig
-   narr/declarative
+   narr/introspector
    narr/extending
-   narr/router
-   narr/startup
+   narr/advconfig
+   narr/extconfig
    narr/threadlocals
    narr/zca
-   narr/forms
 
 .. _tutorials:
 
@@ -67,13 +70,10 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-   tutorials/bfg/index.rst
    tutorials/wiki/index.rst
    tutorials/wiki2/index.rst
-   tutorials/gae/index.rst
+   tutorials/bfg/index.rst
    tutorials/modwsgi/index.rst
-   tutorials/zeo/index.rst
-   tutorials/catalog/index.rst
 
 .. _api_reference:
 
@@ -99,7 +99,6 @@ API Reference
    api/renderers
    api/request
    api/response
-   api/router
    api/scripting
    api/security
    api/settings
@@ -109,36 +108,6 @@ API Reference
    api/url
    api/view
    api/wsgi
-
-.. _zcml_reference:
-
-ZCML Directive Reference
-@@@@@@@@@@@@@@@@@@@@@@@@
-
-.. toctree::
-   :maxdepth: 1
-
-   zcml/aclauthorizationpolicy
-   zcml/adapter
-   zcml/authtktauthenticationpolicy
-   zcml/asset
-   zcml/configure
-   zcml/default_permission
-   zcml/forbidden
-   zcml/handler
-   zcml/include
-   zcml/localenegotiator
-   zcml/notfound
-   zcml/remoteuserauthenticationpolicy
-   zcml/renderer
-   zcml/repozewho1authenticationpolicy
-   zcml/route
-   zcml/scan
-   zcml/static
-   zcml/subscriber
-   zcml/translationdir
-   zcml/utility
-   zcml/view
 
 .. backmatter::
 

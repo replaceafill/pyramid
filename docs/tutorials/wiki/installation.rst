@@ -21,6 +21,12 @@ Preparation, UNIX
    your system, obtain, install, or find `Python 2.6
    <http://python.org/download/releases/2.6.6/>`_ for your system.
 
+#. Make sure the Python development headers are installed on your system.  If
+   you've installed Python from source, these will already be installed.  If
+   you're using a system Python, you may have to install a ``python-dev``
+   package (e.g. ``apt-get python-dev``).  The headers are not required for
+   Pyramid itself, just for dependencies of the tutorial.
+
 #. Install the latest `setuptools` into the Python you
    obtained/installed/found in the step above: download `ez_setup.py
    <http://peak.telecommunity.com/dist/ez_setup.py>`_ and run it using
@@ -59,13 +65,13 @@ Preparation, UNIX
 
      $ bin/easy_install pyramid
 
-#. Use ``easy_install`` to install ``docutils``, ``repoze.tm``,
-   ``repoze.zodbconn``, ``nose`` and ``coverage``:
+#. Use ``easy_install`` to install ``docutils``, ``pyramid_tm``,
+   ``pyramid_zodbconn``, ``pyramid_debugtoolbar``, ``nose`` and ``coverage``:
 
    .. code-block:: text
 
-     $ bin/easy_install docutils repoze.tm repoze.zodbconn \
-               nose coverage
+     $ bin/easy_install docutils pyramid_tm pyramid_zodbconn \
+               pyramid_debugtoolbar nose coverage
 
 Preparation, Windows
 --------------------
@@ -111,22 +117,23 @@ Preparation, Windows
 
      c:\pyramidtut> Scripts\easy_install pyramid
 
-#. Use ``easy_install`` to install ``docutils``, ``repoze.tm``,
-   ``repoze.zodbconn``, ``nose`` and ``coverage``:
+#. Use ``easy_install`` to install ``docutils``, ``pyramid_tm``,
+   ``pyramid_zodbconn``, ``pyramid_debugtoolbar``, ``nose`` and ``coverage``:
 
    .. code-block:: text
 
-     c:\pyramidtut> Scripts\easy_install docutils repoze.tm \
-           repoze.zodbconn nose coverage
+     c:\pyramidtut> Scripts\easy_install docutils pyramid_tm \
+           pyramid_zodbconn pyramid_debugtoolbar nose coverage
 
 .. _making_a_project:
 
-Making a Project
-================
+Make a Project
+==============
 
-Your next step is to create a project.  :app:`Pyramid` supplies a
-variety of templates to generate sample projects.  For this tutorial,
-we will use the :term:`ZODB` -oriented template named ``pyramid_zodb``.
+Your next step is to create a project.  For this tutorial, we will use the
+:term:`scaffold` named ``zodb``, which generates an application
+that uses :term:`ZODB` and :term:`traversal`.  :app:`Pyramid`
+supplies a variety of scaffolds to generate sample projects.
 
 The below instructions assume your current working directory is the
 "virtualenv" named "pyramidtut".
@@ -135,22 +142,26 @@ On UNIX:
 
 .. code-block:: text
 
-  $ bin/paster create -t pyramid_zodb tutorial
+  $ bin/pcreate -s zodb tutorial
 
 On Windows:
 
 .. code-block:: text
 
-   c:\pyramidtut> Scripts\paster create -t pyramid_zodb tutorial
+   c:\pyramidtut> Scripts\pcreate -s zodb tutorial
 
-.. note:: If you are using Windows, the ``pyramid_zodb`` Paster template
+.. note:: You don't have to call it `tutorial` -- the code uses
+   relative paths for imports and finding templates and static
+   resources.
+
+.. note:: If you are using Windows, the ``zodb`` scaffold
    doesn't currently deal gracefully with installation into a location
    that contains spaces in the path.  If you experience startup
    problems, try putting both the virtualenv and the project into
    directories that do not contain spaces in their paths.
 
-Installing the Project in "Development Mode"
-============================================
+Install the Project in "Development Mode"
+=========================================
 
 In order to do development on the project easily, you must "register"
 the project as a development egg in your workspace using the
@@ -174,8 +185,8 @@ On Windows:
 
 .. _running_tests:
 
-Running the Tests
-=================
+Run the Tests
+=============
 
 After you've installed the project in development mode, you may run
 the tests for the project.
@@ -192,25 +203,8 @@ On Windows:
 
   c:\pyramidtut\tutorial> ..\Scripts\python setup.py test -q
 
-Starting the Application
-========================
-
-Start the application.
-
-On UNIX:
-
-.. code-block:: text
-
-  $ ../bin/paster serve development.ini --reload
-
-On Windows:
-
-.. code-block:: text
-
-  c:\pyramidtut\tutorial> ..\Scripts\paster serve development.ini --reload
-
-Exposing Test Coverage Information
-==================================
+Expose Test Coverage Information
+================================
 
 You can run the ``nosetests`` command to see test coverage
 information.  This runs the tests in the same way that ``setup.py
@@ -228,31 +222,57 @@ On Windows:
 
 .. code-block:: text
 
-  c:\pyramidtut\tutorial> ..\Scripts\nosetests --cover-package=tutorial \
+  c:\pyramidtut\tutorial> ..\Scripts\nosetests --cover-package=tutorial ^
        --cover-erase --with-coverage
 
-Looks like the code in the ``pyramid_zodb`` template for ZODB projects is
+Looks like the code in the ``zodb`` scaffold for ZODB projects is
 missing some test coverage, particularly in the file named
 ``models.py``.
+
+.. _wiki-start-the-application:
+
+Start the Application
+=====================
+
+Start the application.
+
+On UNIX:
+
+.. code-block:: text
+
+  $ ../bin/pserve development.ini --reload
+
+On Windows:
+
+.. code-block:: text
+
+  c:\pyramidtut\tutorial> ..\Scripts\pserve development.ini --reload
+
+.. note::
+
+   Your OS firewall, if any, may pop up a dialog asking for authorization
+   to allow python to accept incoming network connections.
 
 Visit the Application in a Browser
 ==================================
 
-In a browser, visit `http://localhost:6543/ <http://localhost:6543>`_.
-You will see the generated application's default page.
+In a browser, visit `http://localhost:6543/ <http://localhost:6543>`_.  You
+will see the generated application's default page.
 
-Decisions the ``pyramid_zodb`` Template Has Made For You
-========================================================
+One thing you'll notice is the "debug toolbar" icon on right hand side of the
+page.  You can read more about the purpose of the icon at
+:ref:`debug_toolbar`.  It allows you to get information about your
+application while you develop.
 
-Creating a project using the ``pyramid_zodb`` template makes the following
+Decisions the ``zodb`` Scaffold Has Made For You
+================================================
+
+Creating a project using the ``zodb`` scaffold makes the following
 assumptions:
 
 - you are willing to use :term:`ZODB` as persistent storage
 
 - you are willing to use :term:`traversal` to map URLs to code.
-
-- you want to use imperative code plus a :term:`scan` to perform
-  configuration.
 
 .. note::
 

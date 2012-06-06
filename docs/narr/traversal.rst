@@ -3,6 +3,13 @@
 Traversal
 =========
 
+This chapter explains the technical details of how traversal works in
+Pyramid.
+
+For a quick example, see :doc:`hellotraversal`.
+
+For more about *why* you might use traversal, see :doc:`muchadoabouttraversal`.
+
 A :term:`traversal` uses the URL (Universal Resource Locator) to find a
 :term:`resource` located in a :term:`resource tree`, which is a set of
 nested dictionary-like objects.  Traversal is done by using each segment
@@ -12,7 +19,7 @@ file system.  Traversal walks down the path until it finds a published
 resource, analogous to a file system "directory" or "file".  The
 resource found as the result of a traversal becomes the
 :term:`context` of the :term:`request`.  Then, the :term:`view lookup`
-subsystem is used to find some view code willing "publish" this
+subsystem is used to find some view code willing to "publish" this
 resource by generating a :term:`response`.
 
 Using :term:`Traversal` to map a URL to code is optional.  It is often
@@ -49,17 +56,17 @@ For example, if the path info sequence is ``['a', 'b', 'c']``:
   can be configured to return whatever object is appropriate as the
   traversal root of your application.
 
-- Next, the first element (``a``) is popped from the path segment
+- Next, the first element (``'a'``) is popped from the path segment
   sequence and is used as a key to lookup the corresponding resource
   in the root. This invokes the root resource's ``__getitem__`` method
-  using that value (``a``) as an argument.
+  using that value (``'a'``) as an argument.
 
-- If the root resource "contains" a resource with key ``a``, its
+- If the root resource "contains" a resource with key ``'a'``, its
   ``__getitem__`` method will return it. The :term:`context` temporarily
   becomes the "A" resource.
 
-- The next segment (``b``) is popped from the path sequence, and the "A"
-  resource's ``__getitem__`` is called with that value (``b``) as an
+- The next segment (``'b'``) is popped from the path sequence, and the "A"
+  resource's ``__getitem__`` is called with that value (``'b'``) as an
   argument; we'll presume it succeeds.
 
 - The "A" resource's ``__getitem__`` returns another resource, which
@@ -78,7 +85,7 @@ The results of a :term:`traversal` also include a :term:`view name`. If
 traversal ends before the path segment sequence is exhausted, the
 :term:`view name` is the *next* remaining path segment element. If the
 :term:`traversal` expends all of the path segments, then the :term:`view
-name` is the empty string (`''`).
+name` is the empty string (``''``).
 
 The combination of the context resource and the :term:`view name` found
 via traversal is used later in the same request by the :term:`view
@@ -127,7 +134,7 @@ passing it to an instance of a :term:`Configurator` named ``config``:
    config = Configurator(root_factory=Root)
 
 The ``root_factory`` argument to the
-:class:`pyramid.config.Configurator` constructor registers this root
+:class:`~pyramid.config.Configurator` constructor registers this root
 factory to be called to generate a root resource whenever a request
 enters the application.  The root factory registered this way is also
 known as the global root factory.  A root factory can alternately be
@@ -236,8 +243,8 @@ because they are almost always used together.
 A Description of The Traversal Algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When a user requests a page from your :mod:`traversal` -powered application,
-the system uses this algorithm to find a :term:`context` resource and a
+When a user requests a page from your traversal-powered application, the
+system uses this algorithm to find a :term:`context` resource and a
 :term:`view name`.
 
 #.  The request for the page is presented to the :app:`Pyramid`
@@ -263,26 +270,26 @@ the system uses this algorithm to find a :term:`context` resource and a
     UTF-8 encoding.  If any URL-unquoted path segment in ``PATH_INFO`` is not
     decodeable using the UTF-8 decoding, a :exc:`TypeError` is raised.  A
     segment will be fully URL-unquoted and UTF8-decoded before it is passed
-    it to the ``__getitem__`` of any resource during traversal.
+    in to the ``__getitem__`` of any resource during traversal.
 
     Thus, a request with a ``PATH_INFO`` variable of ``/a/b/c`` maps to the
     traversal sequence ``[u'a', u'b', u'c']``.
 
 #.  :term:`Traversal` begins at the root resource returned by the root
     factory.  For the traversal sequence ``[u'a', u'b', u'c']``, the root
-    resource's ``__getitem__`` is called with the name ``a``.  Traversal
+    resource's ``__getitem__`` is called with the name ``'a'``.  Traversal
     continues through the sequence.  In our example, if the root resource's
     ``__getitem__`` called with the name ``a`` returns a resource (aka
-    "resource ``a``"), that resource's ``__getitem__`` is called with the
-    name ``b``.  If resource A returns a resource when asked for ``b``,
-    "resource ``b``"'s ``__getitem__`` is then asked for the name ``c``, and
-    may return "resource ``c``".
+    resource "A"), that resource's ``__getitem__`` is called with the name
+    ``'b'``.  If resource "A" returns a resource "B" when asked for ``'b'``,
+    resource B's ``__getitem__`` is then asked for the name ``'c'``, and may
+    return resource "C".
 
 #.  Traversal ends when a) the entire path is exhausted or b) when any
     resouce raises a :exc:`KeyError` from its ``__getitem__`` or c) when any
     non-final path element traversal does not have a ``__getitem__`` method
-    (resulting in a :exc:`NameError`) or d) when any path element is prefixed
-    with the set of characters ``@@`` (indicating that the characters
+    (resulting in a :exc:`AttributeError`) or d) when any path element is
+    prefixed with the set of characters ``@@`` (indicating that the characters
     following the ``@@`` token should be treated as a :term:`view name`).
 
 #.  When traversal ends for any of the reasons in the previous step, the last
@@ -355,7 +362,7 @@ Here's what happens:
 - :mod:`traversal` traverses "foo", and attempts to find "bar", which it
   finds.
 
-- :mod:`traversal` traverses bar, and attempts to find "baz", which it does
+- :mod:`traversal` traverses "bar", and attempts to find "baz", which it does
   not find (the "bar" resource raises a :exc:`KeyError` when asked for
   "baz").
 
@@ -456,6 +463,104 @@ as the sole argument: ``request``; it is expected to return a response.
    -specific request attributes are also available as described in
    :ref:`special_request_attributes`.
 
+.. index::
+   single: resource interfaces
+
+.. _using_resource_interfaces:
+
+Using Resource Interfaces In View Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Instead of registering your views with a ``context`` that names a Python
+resource *class*, you can optionally register a view callable with a
+``context`` which is an :term:`interface`.  An interface can be attached
+arbitrarily to any resource object.  View lookup treats context interfaces
+specially, and therefore the identity of a resource can be divorced from that
+of the class which implements it.  As a result, associating a view with an
+interface can provide more flexibility for sharing a single view between two
+or more different implementations of a resource type.  For example, if two
+resource objects of different Python class types share the same interface,
+you can use the same view configuration to specify both of them as a
+``context``.
+
+In order to make use of interfaces in your application during view dispatch,
+you must create an interface and mark up your resource classes or instances
+with interface declarations that refer to this interface.
+
+To attach an interface to a resource *class*, you define the interface and
+use the :func:`zope.interface.implementer` class decorator to associate the
+interface with the class.
+
+.. code-block:: python
+   :linenos:
+
+   from zope.interface import Interface
+   from zope.interface import implementer
+
+   class IHello(Interface):
+       """ A marker interface """
+
+   @implementer(IHello)
+   class Hello(object):
+       pass
+
+To attach an interface to a resource *instance*, you define the interface and
+use the :func:`zope.interface.alsoProvides` function to associate the
+interface with the instance.  This function mutates the instance in such a
+way that the interface is attached to it.
+
+.. code-block:: python
+   :linenos:
+
+   from zope.interface import Interface
+   from zope.interface import alsoProvides
+
+   class IHello(Interface):
+       """ A marker interface """
+
+   class Hello(object):
+       pass
+
+   def make_hello():
+       hello = Hello()
+       alsoProvides(hello, IHello)
+       return hello
+
+Regardless of how you associate an interface, with a resource instance, or a
+resource class, the resulting code to associate that interface with a view
+callable is the same.  Assuming the above code that defines an ``IHello``
+interface lives in the root of your application, and its module is named
+"resources.py", the interface declaration below will associate the
+``mypackage.views.hello_world`` view with resources that implement, or
+provide, this interface.
+
+.. code-block:: python
+   :linenos:
+
+   # config is an instance of pyramid.config.Configurator
+
+   config.add_view('mypackage.views.hello_world', name='hello.html',
+                   context='mypackage.resources.IHello')
+
+Any time a resource that is determined to be the :term:`context` provides
+this interface, and a view named ``hello.html`` is looked up against it as
+per the URL, the ``mypackage.views.hello_world`` view callable will be
+invoked.
+
+Note, in cases where a view is registered against a resource class, and a
+view is also registered against an interface that the resource class
+implements, an ambiguity arises. Views registered for the resource class take
+precedence over any views registered for any interface the resource class
+implements. Thus, if one view configuration names a ``context`` of both the
+class type of a resource, and another view configuration names a ``context``
+of interface implemented by the resource's class, and both view
+configurations are otherwise identical, the view registered for the context's
+class will "win".
+
+For more information about defining resources with interfaces for use within
+view configuration, see :ref:`resources_which_implement_interfaces`.
+
+
 References
 ----------
 
@@ -468,6 +573,6 @@ See the :ref:`view_config_chapter` chapter for detailed information about
 The :mod:`pyramid.traversal` module contains API functions that deal with
 traversal, such as traversal invocation from within application code.
 
-The :func:`pyramid.url.resource_url` function generates a URL when given a
-resource retrieved from a resource tree.
+The :meth:`pyramid.request.Request.resource_url` method generates a URL when
+given a resource retrieved from a resource tree.
 

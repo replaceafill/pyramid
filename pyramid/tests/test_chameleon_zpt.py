@@ -2,6 +2,7 @@ import unittest
 
 from pyramid.testing import skip_on
 from pyramid import testing
+from pyramid.compat import text_type
 
 class Base(object):
     def setUp(self):
@@ -33,7 +34,6 @@ class ZPTTemplateRendererTests(Base, unittest.TestCase):
         klass = self._getTargetClass()
         return klass(*arg, **kw)
 
-    @skip_on('pypy')
     def test_instance_implements_ITemplate(self):
         from zope.interface.verify import verifyObject
         from pyramid.interfaces import ITemplateRenderer
@@ -41,95 +41,94 @@ class ZPTTemplateRendererTests(Base, unittest.TestCase):
         lookup = DummyLookup()
         verifyObject(ITemplateRenderer, self._makeOne(path, lookup))
 
-    @skip_on('pypy')
     def test_class_implements_ITemplate(self):
         from zope.interface.verify import verifyClass
         from pyramid.interfaces import ITemplateRenderer
         verifyClass(ITemplateRenderer, self._getTargetClass())
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_call(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         instance = self._makeOne(minimal, lookup)
         result = instance({}, {})
-        self.failUnless(isinstance(result, unicode))
-        self.assertEqual(result,
+        self.assertTrue(isinstance(result, text_type))
+        self.assertEqual(result.rstrip('\n'),
                      '<div xmlns="http://www.w3.org/1999/xhtml">\n</div>')
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_reified(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template, instance.__dict__['template'])
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_with_ichameleon_translate(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template.translate, lookup.translate)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_with_debug_templates(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         lookup.debug = True
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template.debug, True)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_without_debug_templates(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         lookup.debug = False
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template.debug, False)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_with_reload_templates(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         lookup.auto_reload = True
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template.auto_reload, True)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_template_without_reload_templates(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         lookup.auto_reload = False
         instance = self._makeOne(minimal, lookup)
-        self.failIf('template' in instance.__dict__)
+        self.assertFalse('template' in instance.__dict__)
         template  = instance.template
         self.assertEqual(template.auto_reload, False)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_call_with_nondict_value(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         instance = self._makeOne(minimal, lookup)
         self.assertRaises(ValueError, instance, None, {})
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_implementation(self):
         minimal = self._getTemplatePath('minimal.pt')
         lookup = DummyLookup()
         instance = self._makeOne(minimal, lookup)
         result = instance.implementation()()
-        self.failUnless(isinstance(result, unicode))
-        self.assertEqual(result,
+        self.assertTrue(isinstance(result, text_type))
+        self.assertEqual(result.rstrip('\n'),
                      '<div xmlns="http://www.w3.org/1999/xhtml">\n</div>')
         
 
@@ -138,12 +137,12 @@ class RenderTemplateTests(Base, unittest.TestCase):
         from pyramid.chameleon_zpt import render_template
         return render_template(name, **kw)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_it(self):
         minimal = self._getTemplatePath('minimal.pt')
         result = self._callFUT(minimal)
-        self.failUnless(isinstance(result, unicode))
-        self.assertEqual(result,
+        self.assertTrue(isinstance(result, text_type))
+        self.assertEqual(result.rstrip('\n'),
                      '<div xmlns="http://www.w3.org/1999/xhtml">\n</div>')
 
 class RenderTemplateToResponseTests(Base, unittest.TestCase):
@@ -151,18 +150,18 @@ class RenderTemplateToResponseTests(Base, unittest.TestCase):
         from pyramid.chameleon_zpt import render_template_to_response
         return render_template_to_response(name, **kw)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_it(self):
         minimal = self._getTemplatePath('minimal.pt')
         result = self._callFUT(minimal)
         from webob import Response
-        self.failUnless(isinstance(result, Response))
-        self.assertEqual(result.app_iter,
-                     ['<div xmlns="http://www.w3.org/1999/xhtml">\n</div>'])
+        self.assertTrue(isinstance(result, Response))
+        self.assertEqual(result.app_iter[0].rstrip(b'\n'),
+                     b'<div xmlns="http://www.w3.org/1999/xhtml">\n</div>')
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(len(result.headerlist), 2)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_iresponsefactory_override(self):
         from webob import Response
         class Response2(Response):
@@ -171,14 +170,14 @@ class RenderTemplateToResponseTests(Base, unittest.TestCase):
         self._registerUtility(Response2, IResponseFactory)
         minimal = self._getTemplatePath('minimal.pt')
         result = self._callFUT(minimal)
-        self.failUnless(isinstance(result, Response2))
+        self.assertTrue(isinstance(result, Response2))
 
 class GetRendererTests(Base, unittest.TestCase):
     def _callFUT(self, name):
         from pyramid.chameleon_zpt import get_renderer
         return get_renderer(name)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_it(self):
         from pyramid.interfaces import IRendererFactory
         class Dummy:
@@ -189,14 +188,14 @@ class GetRendererTests(Base, unittest.TestCase):
             return renderer
         self._registerUtility(rf, IRendererFactory, name='foo')
         result = self._callFUT('foo')
-        self.failUnless(result is renderer)
+        self.assertTrue(result is renderer)
 
 class GetTemplateTests(Base, unittest.TestCase):
     def _callFUT(self, name):
         from pyramid.chameleon_zpt import get_template
         return get_template(name)
 
-    @skip_on('java', 'pypy')
+    @skip_on('java')
     def test_it(self):
         from pyramid.interfaces import IRendererFactory
         class Dummy:
@@ -208,7 +207,7 @@ class GetTemplateTests(Base, unittest.TestCase):
             return renderer
         self._registerUtility(rf, IRendererFactory, name='foo')
         result = self._callFUT('foo')
-        self.failUnless(result is renderer.template)
+        self.assertTrue(result is renderer.template)
 
 class DummyLookup(object):
     auto_reload=True

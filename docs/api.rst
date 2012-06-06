@@ -12,6 +12,7 @@ documentation is organized alphabetically by module name.
    api/authentication
    api/chameleon_text
    api/chameleon_zpt
+   api/compat
    api/config
    api/events
    api/exceptions
@@ -20,18 +21,21 @@ documentation is organized alphabetically by module name.
    api/interfaces
    api/location
    api/paster
+   api/path
    api/registry
    api/renderers
    api/request
    api/response
-   api/router
+   api/scaffolds
    api/scripting
    api/security
    api/session
    api/settings
+   api/static
    api/testing
    api/threadlocal
    api/traversal
+   api/tweens
    api/url
    api/view
    api/wsgi

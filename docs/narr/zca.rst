@@ -38,10 +38,10 @@ code is high.
 While the ZCA is an excellent tool with which to build a *framework*
 such as :app:`Pyramid`, it is not always the best tool with which
 to build an *application* due to the opacity of the ``zope.component``
-APIs.  Accordingly, :app:`Pyramid` tends to hide the the presence
-of the ZCA from application developers.  You needn't understand the
-ZCA to create a :app:`Pyramid` application; its use is effectively
-only a framework implementation detail.
+APIs.  Accordingly, :app:`Pyramid` tends to hide the presence of the
+ZCA from application developers.  You needn't understand the ZCA to
+create a :app:`Pyramid` application; its use is effectively only a
+framework implementation detail.
 
 However, developers who are already used to writing :term:`Zope`
 applications often still wish to use the ZCA while building a
@@ -57,24 +57,23 @@ Using the ZCA Global API in a :app:`Pyramid` Application
 -----------------------------------------------------------
 
 :term:`Zope` uses a single ZCA registry -- the "global" ZCA registry
--- for all Zope applications run in the same Python process,
+-- for all Zope applications that run in the same Python process,
 effectively making it impossible to run more than one Zope application
 in a single process.
 
-However, for ease of deployment, it's often useful to be able to run
-more than a single application per process.  For example, use of a
-:term:`Paste` "composite" allows you to run separate individual WSGI
+However, for ease of deployment, it's often useful to be able to run more
+than a single application per process.  For example, use of a
+:term:`PasteDeploy` "composite" allows you to run separate individual WSGI
 applications in the same process, each answering requests for some URL
-prefix.  This makes it possible to run, for example, a TurboGears
-application at ``/turbogears`` and a BFG application at ``/bfg``, both
-served up using the same :term:`WSGI` server within a single Python
-process.
+prefix.  This makes it possible to run, for example, a TurboGears application
+at ``/turbogears`` and a :app:`Pyramid` application at ``/pyramid``, both
+served up using the same :term:`WSGI` server within a single Python process.
 
 Most production Zope applications are relatively large, making it
 impractical due to memory constraints to run more than one Zope
-application per Python process.  However, a :app:`Pyramid`
-application may be very small and consume very little memory, so it's
-a reasonable goal to be able to run more than one BFG application per
+application per Python process.  However, a :app:`Pyramid` application
+may be very small and consume very little memory, so it's a reasonable
+goal to be able to run more than one :app:`Pyramid` application per
 process.
 
 In order to make it possible to run more than one :app:`Pyramid`
@@ -158,9 +157,7 @@ Consider the following bit of idiomatic :app:`Pyramid` startup code:
 
    def app(global_settings, **settings):
        config = Configurator(settings=settings)
-       config.begin()
-       config.load_zcml('configure.zcml')
-       config.end()
+       config.include('some.other.package')
        return config.make_wsgi_app()
 
 When the ``app`` function above is run, a :term:`Configurator` is
@@ -173,7 +170,7 @@ when a :term:`Configurator` constructor is called, or when a
 
 During a request, the application registry created by the Configurator
 is "made current".  This means calls to
-:func:`pyramid.threadlocal.get_current_registry` in the thread
+:func:`~pyramid.threadlocal.get_current_registry` in the thread
 handling the request will return the component registry associated
 with the application.
 
@@ -184,10 +181,10 @@ global ZCA API.  Without special treatment, the ZCA global APIs will
 always return the global ZCA registry (the one in
 ``zope.component.globalregistry.base``).
 
-To "fix" this and make the ZCA global APIs use the "current" BFG
-registry, you need to call
-:meth:`pyramid.config.Configurator.hook_zca` within your
-setup code.  For example:
+To "fix" this and make the ZCA global APIs use the "current"
+:app:`Pyramid` registry, you need to call
+:meth:`~pyramid.config.Configurator.hook_zca` within your setup code.
+For example:
 
 .. code-block:: python
    :linenos:
@@ -198,9 +195,7 @@ setup code.  For example:
    def app(global_settings, **settings):
        config = Configurator(settings=settings)
        config.hook_zca()
-       config.begin()
-       config.load_zcml('configure.zcml')
-       config.end()
+       config.include('some.other.application')
        return config.make_wsgi_app()
 
 We've added a line to our original startup code, line number 6, which
@@ -249,17 +244,14 @@ registry at startup time instead of constructing a new one:
        globalreg = getGlobalSiteManager()
        config = Configurator(registry=globalreg)
        config.setup_registry(settings=settings)
-       config.hook_zca()
-       config.begin()
-       config.load_zcml('configure.zcml')
-       config.end()
+       config.include('some.other.application')
        return config.make_wsgi_app()
 
 Lines 5, 6, and 7 above are the interesting ones.  Line 5 retrieves
 the global ZCA component registry.  Line 6 creates a
 :term:`Configurator`, passing the global ZCA registry into its
 constructor as the ``registry`` argument.  Line 7 "sets up" the global
-registry with BFG-specific registrations; this is code that is
+registry with Pyramid-specific registrations; this is code that is
 normally executed when a registry is constructed rather than created,
 but we must call it "by hand" when we pass an explicit registry.
 
@@ -267,37 +259,4 @@ At this point, :app:`Pyramid` will use the ZCA global registry
 rather than creating a new application-specific registry; since by
 default the ZCA global API will use this registry, things will work as
 you might expect a Zope app to when you use the global ZCA API.
-
-.. index::
-   single: Zope ZCML directives
-   single: getGlobalSiteManager
-   single: getSiteManager
-
-Using Broken ZCML Directives
-----------------------------
-
-Some :term:`Zope` and third-party :term:`ZCML` directives use the
-``zope.component.getGlobalSiteManager`` API to get "the registry" when
-they should actually be calling ``zope.component.getSiteManager``.
-
-``zope.component.getSiteManager`` can be overridden by
-:app:`Pyramid` via
-:meth:`pyramid.config.Configurator.hook_zca`, while
-``zope.component.getGlobalSiteManager`` cannot.  Directives that use
-``zope.component.getGlobalSiteManager`` are effectively broken; no
-ZCML directive should be using this function to find a registry to
-populate.
-
-You cannot use ZCML directives which use
-``zope.component.getGlobalSiteManager`` within a :app:`Pyramid`
-application without passing the ZCA global registry to the
-:term:`Configurator` constructor at application startup, as per
-:ref:`using_the_zca_global_registry`.
-
-One alternative exists: fix the ZCML directive to use
-``getSiteManager`` rather than ``getGlobalSiteManager``.  If a
-directive disuses ``getGlobalSiteManager``, the ``hook_zca`` method of
-using a component registry as documented in :ref:`hook_zca` will begin
-to work, allowing you to make use of the ZCML directive without
-also using the ZCA global registry.
 

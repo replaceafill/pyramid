@@ -6,7 +6,11 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
-requires = ['pyramid', 'WebError']
+requires = [
+    'pyramid',
+    'pyramid_debugtoolbar',
+    'waitress',
+    ]
 
 setup(name='MyProject',
       version='0.0',
@@ -32,6 +36,5 @@ setup(name='MyProject',
       [paste.app_factory]
       main = myproject:main
       """,
-      paster_plugins=['pyramid'],
       )
 

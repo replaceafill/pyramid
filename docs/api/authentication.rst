@@ -14,10 +14,13 @@ Authentication Policies
 
   .. autoclass:: RemoteUserAuthenticationPolicy
 
+  .. autoclass:: SessionAuthenticationPolicy
+
 Helper Classes
 ~~~~~~~~~~~~~~
 
   .. autoclass:: AuthTktCookieHelper
+     :members:
 
 
 

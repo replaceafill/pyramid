@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+SPHINXOPTS    = -W
 SPHINXBUILD   = sphinx-build
 PAPER         =
 
@@ -85,4 +85,4 @@ epub:
 	@echo "Build finished. The epub file is in _build/epub."
 
 _themes:
-	git clone git://github.com/Pylons/pylons_sphinx_theme.git _themes
+	git submodule update --init

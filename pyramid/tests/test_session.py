@@ -54,7 +54,7 @@ class TestUnencryptedCookieSession(unittest.TestCase):
         session = self._makeOne(request)
         session['a'] = 1
         self.assertEqual(session.invalidate(), None)
-        self.failIf('a' in session)
+        self.assertFalse('a' in session)
 
     def test__set_cookie_on_exception(self):
         request = testing.DummyRequest()
@@ -63,7 +63,17 @@ class TestUnencryptedCookieSession(unittest.TestCase):
         session._cookie_on_exception = False
         response = DummyResponse()
         self.assertEqual(session._set_cookie(response), False)
-        
+
+    def test__set_cookie_on_exception_no_request_exception(self):
+        import webob
+        request = testing.DummyRequest()
+        request.exception = None
+        session = self._makeOne(request)
+        session._cookie_on_exception = False
+        response = webob.Response()
+        self.assertEqual(session._set_cookie(response), True)
+        self.assertEqual(response.headerlist[-1][0], 'Set-Cookie')
+
     def test__set_cookie_cookieval_too_long(self):
         request = testing.DummyRequest()
         session = self._makeOne(request)
@@ -80,16 +90,8 @@ class TestUnencryptedCookieSession(unittest.TestCase):
         self.assertEqual(session._set_cookie(response), True)
         self.assertEqual(response.headerlist[-1][0], 'Set-Cookie')
 
-    def test__set_cookie_other_kind_of_response(self):
-        request = testing.DummyRequest()
-        request.exception = None
-        session = self._makeOne(request)
-        session['abc'] = 'x'
-        response = DummyResponse()
-        self.assertEqual(session._set_cookie(response), True)
-        self.assertEqual(len(response.headerlist), 1)
-
     def test__set_cookie_options(self):
+        from pyramid.response import Response
         request = testing.DummyRequest()
         request.exception = None
         session = self._makeOne(request,
@@ -100,13 +102,12 @@ class TestUnencryptedCookieSession(unittest.TestCase):
                                 cookie_httponly = True,
                                 )
         session['abc'] = 'x'
-        response = DummyResponse()
+        response = Response()
         self.assertEqual(session._set_cookie(response), True)
-        self.assertEqual(len(response.headerlist), 1)
-        cookieval= response.headerlist[0][1]
+        cookieval= response.headerlist[-1][1]
         val, domain, path, secure, httponly = [x.strip() for x in
                                                cookieval.split(';')]
-        self.failUnless(val.startswith('abc='))
+        self.assertTrue(val.startswith('abc='))
         self.assertEqual(domain, 'Domain=localhost')
         self.assertEqual(path, 'Path=/foo')
         self.assertEqual(secure, 'secure')
@@ -118,7 +119,26 @@ class TestUnencryptedCookieSession(unittest.TestCase):
         session.flash('msg1')
         session.flash('msg2')
         self.assertEqual(session['_f_'], ['msg1', 'msg2'])
-        
+
+    def test_flash_allow_duplicate_false(self):
+        request = testing.DummyRequest()
+        session = self._makeOne(request)
+        session.flash('msg1')
+        session.flash('msg1', allow_duplicate=False)
+        self.assertEqual(session['_f_'], ['msg1'])
+
+    def test_flash_allow_duplicate_true_and_msg_not_in_storage(self):
+        request = testing.DummyRequest()
+        session = self._makeOne(request)
+        session.flash('msg1', allow_duplicate=True)
+        self.assertEqual(session['_f_'], ['msg1'])
+
+    def test_flash_allow_duplicate_false_and_msg_not_in_storage(self):
+        request = testing.DummyRequest()
+        session = self._makeOne(request)
+        session.flash('msg1', allow_duplicate=False)
+        self.assertEqual(session['_f_'], ['msg1'])
+
     def test_flash_mixed(self):
         request = testing.DummyRequest()
         session = self._makeOne(request)
@@ -176,14 +196,14 @@ class TestUnencryptedCookieSession(unittest.TestCase):
         session['_csrft_'] = 'token'
         token = session.get_csrf_token()
         self.assertEqual(token, 'token')
-        self.failUnless('_csrft_' in session)
+        self.assertTrue('_csrft_' in session)
 
     def test_get_csrf_token_new(self):
         request = testing.DummyRequest()
         session = self._makeOne(request)
         token = session.get_csrf_token()
-        self.failUnless(token)
-        self.failUnless('_csrft_' in session)
+        self.assertTrue(token)
+        self.assertTrue('_csrft_' in session)
 
 class Test_manage_accessed(unittest.TestCase):
     def _makeOne(self, wrapped):
@@ -225,7 +245,7 @@ class Test_manage_accessed(unittest.TestCase):
         response = webob.Response()
         result = callbacks[0](request, response)
         self.assertEqual(result, None)
-        self.failIf('Set-Cookie' in dict(response.headerlist))
+        self.assertFalse('Set-Cookie' in dict(response.headerlist))
 
     def test_cookie_is_set(self):
         request = testing.DummyRequest()
@@ -243,21 +263,15 @@ class Test_manage_accessed(unittest.TestCase):
         self.assertEqual(session.response, response)
 
 def serialize(data, secret):
-    try:
-        from hashlib import sha1
-    except ImportError: # pragma: no cover
-        import sha as sha1
-
-    try:
-        import cPickle as pickle
-    except ImportError: # pragma: no cover
-        import pickle
-
     import hmac
     import base64
-    pickled = pickle.dumps('123', pickle.HIGHEST_PROTOCOL)
-    sig = hmac.new(secret, pickled, sha1).hexdigest()
-    return sig + base64.standard_b64encode(pickled)
+    from hashlib import sha1
+    from pyramid.compat import bytes_
+    from pyramid.compat import native_
+    from pyramid.compat import pickle
+    pickled = pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
+    sig = hmac.new(bytes_(secret), pickled, sha1).hexdigest()
+    return sig + native_(base64.b64encode(pickled))
 
 class Test_signed_serialize(unittest.TestCase):
     def _callFUT(self, data, secret):

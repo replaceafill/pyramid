@@ -1,27 +1,52 @@
 import copy
 import os
 
-from zope.configuration.xmlconfig import _clearContext
+from zope.deprecation import deprecated
 
-from zope.interface import implements
-from zope.interface import Interface
-from zope.interface import alsoProvides
+from zope.interface import (
+    implementer,
+    Interface,
+    alsoProvides,
+    )
 
-from pyramid.interfaces import IRequest
-from pyramid.interfaces import ISecuredView
-from pyramid.interfaces import IView
-from pyramid.interfaces import IViewClassifier
-from pyramid.interfaces import ISession
+from pyramid.interfaces import (
+    IRequest,
+    IResponseFactory,
+    ISecuredView,
+    IView,
+    IViewClassifier,
+    ISession,
+    )
+
+from pyramid.compat import (
+    PY3,
+    PYPY,
+    class_types,
+    )
 
 from pyramid.config import Configurator
-from pyramid.exceptions import Forbidden
+from pyramid.decorator import reify
+from pyramid.httpexceptions import HTTPForbidden
 from pyramid.response import Response
 from pyramid.registry import Registry
-from pyramid.security import Authenticated
-from pyramid.security import Everyone
-from pyramid.security import has_permission
-from pyramid.threadlocal import get_current_registry
-from pyramid.threadlocal import manager
+
+from pyramid.security import (
+    Authenticated,
+    Everyone,
+    has_permission,
+    )
+
+from pyramid.threadlocal import (
+    get_current_registry,
+    manager,
+    )
+
+from pyramid.request import (
+    DeprecatedRequestMethodsMixin,
+    CallbackMethodsMixin,
+    )
+
+from pyramid.url import URLMethodsMixin
 
 _marker = object()
 
@@ -64,6 +89,12 @@ def registerDummySecurityPolicy(userid=None, groupids=(), permissive=True):
     config.commit()
     return result
 
+deprecated('registerDummySecurityPolicy',
+           'The testing.registerDummySecurityPolicy API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_securitypolicy '
+           'method in your unit and integration tests.')
+
 def registerResources(resources):
     """ Registers a dictionary of :term:`resource` objects that can be
     resolved via the :func:`pyramid.traversal.find_resource` API.
@@ -90,7 +121,19 @@ def registerResources(resources):
     config.commit()
     return result
 
+deprecated('registerResources',
+           'The testing.registerResources API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_resources '
+           'method in your unit and integration tests.')
+
 registerModels = registerResources
+
+deprecated('registerModels',
+           'The testing.registerModels API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_resources '
+           'method in your unit and integration tests.')
 
 def registerEventListener(event_iface=None):
     """ Registers an :term:`event` listener (aka :term:`subscriber`)
@@ -102,9 +145,7 @@ def registerEventListener(event_iface=None):
     event will be appended to the list.  You can then compare the
     values in the list to expected event notifications.  This method
     is useful when testing code that wants to call
-    :meth:`pyramid.registry.Registry.notify`,
-    :func:`zope.component.event.dispatch` or
-    :func:`zope.component.event.objectEventNotify`.
+    :meth:`pyramid.registry.Registry.notify`.
 
     The default value of ``event_iface`` (``None``) implies a
     subscriber registered for *any* kind of event.
@@ -120,6 +161,12 @@ def registerEventListener(event_iface=None):
     config.commit()
     return result
 
+deprecated('registerEventListener',
+           'The testing.registerEventListener API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_add_subscriber '
+           'method in your unit and integration tests.')
+
 def registerTemplateRenderer(path, renderer=None):
     """ Register a template renderer at ``path`` (usually a relative
     filename ala ``templates/foo.pt``) and return the renderer object.
@@ -132,7 +179,7 @@ def registerTemplateRenderer(path, renderer=None):
 
     .. warning:: This API is deprecated as of :app:`Pyramid` 1.0.
        Instead use the
-       :meth:`pyramid.config.Configurator.testing_add_template`
+       :meth:`pyramid.config.Configurator.testing_add_renderer`
        method in your unit and integration tests.
 
     """
@@ -142,9 +189,21 @@ def registerTemplateRenderer(path, renderer=None):
     config.commit()
     return result
 
+deprecated('registerTemplateRenderer',
+           'The testing.registerTemplateRenderer API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_add_renderer '
+           'method in your unit and integration tests.')
+
 # registerDummyRenderer is a deprecated alias that should never be removed
 # (too much usage in the wild)
 registerDummyRenderer = registerTemplateRenderer
+
+deprecated('registerDummyRenderer',
+           'The testing.registerDummyRenderer API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.testing_add_renderer '
+           'method in your unit and integration tests.')
 
 def registerView(name, result='', view=None, for_=(Interface, Interface),
                  permission=None):
@@ -178,7 +237,7 @@ def registerView(name, result='', view=None, for_=(Interface, Interface),
     else:
         def _secure(context, request):
             if not has_permission(permission, context, request):
-                raise Forbidden('no permission')
+                raise HTTPForbidden('no permission')
             else:
                 return view(context, request)
         _secure.__call_permissive__ = view
@@ -186,6 +245,12 @@ def registerView(name, result='', view=None, for_=(Interface, Interface),
             return has_permission(permission, context, request)
         _secure.__permitted__ = permitted
         return registerAdapter(_secure, for_, ISecuredView, name)
+
+deprecated('registerView',
+           'The registerView API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.add_view '
+           'method in your unit and integration tests.')
 
 def registerUtility(impl, iface=Interface, name=''):
     """ Register a ZCA utility component.
@@ -209,6 +274,13 @@ def registerUtility(impl, iface=Interface, name=''):
     reg = get_current_registry()
     reg.registerUtility(impl, iface, name=name)
     return impl
+
+deprecated('registerUtility',
+           'The registerUtility API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.registry.registerUtility method (via '
+           'e.g. "config.registry.registerUtility(..)" '
+           'method in your unit and integration tests.')
 
 def registerAdapter(impl, for_=Interface, provides=Interface, name=''):
     """ Register a ZCA adapter component.
@@ -242,6 +314,13 @@ def registerAdapter(impl, for_=Interface, provides=Interface, name=''):
     reg.registerAdapter(impl, for_, provides, name=name)
     return impl
 
+deprecated('registerAdapter',
+           'The registerAdapter API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.registry.registerAdapter method (via '
+           'e.g. "config.registry.registerAdapter(..)" '
+           'method in your unit and integration tests.')
+
 def registerSubscriber(subscriber, iface=Interface):
     """ Register a ZCA subscriber component.
 
@@ -268,6 +347,12 @@ def registerSubscriber(subscriber, iface=Interface):
     config.commit()
     return result
 
+deprecated('registerSubscriber',
+           'The testing.registerSubscriber API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.add_subscriber '
+           'method in your unit and integration tests.')
+
 def registerRoute(pattern, name, factory=None):
     """ Register a new :term:`route` using a pattern
     (e.g. ``:pagename``), a name (e.g. ``home``), and an optional root
@@ -290,6 +375,12 @@ def registerRoute(pattern, name, factory=None):
     result = config.add_route(name, pattern, factory=factory)
     config.commit()
     return result
+
+deprecated('registerRoute',
+           'The testing.registerRoute API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.add_route '
+           'method in your unit and integration tests.')
 
 def registerSettings(dictarg=None, **kw):
     """Register one or more 'setting' key/value pairs.  A setting is
@@ -316,6 +407,12 @@ def registerSettings(dictarg=None, **kw):
     registry = get_current_registry()
     config = Configurator(registry=registry)
     config.add_settings(dictarg, **kw)
+
+deprecated('registerSettings',
+           'The testing.registerSettings API is deprecated as of '
+           'Pyramid 1.0. Instead use the '
+           'pyramid.config.Configurator.add_settings '
+           'method in your unit and integration tests.')
 
 class DummyRootFactory(object):
     __parent__ = None
@@ -360,12 +457,11 @@ class DummySecurityPolicy(object):
 class DummyTemplateRenderer(object):
     """
     An instance of this class is returned from
-    :func:`pyramid.testing.registerTemplateRenderer`.  It has a
+    :meth:`pyramid.config.Configurator.testing_add_renderer`.  It has a
     helper function (``assert_``) that makes it possible to make an
     assertion which compares data passed to the renderer by the view
     function against expected key/value pairs.
     """
-
     def __init__(self, string_response=''):
         self._received = {}
         self._string_response = string_response
@@ -419,7 +515,7 @@ class DummyTemplateRenderer(object):
             if myval != v:
                 raise AssertionError(
                     '\nasserted value for %s: %r\nactual value: %r' % (
-                    v, k, myval))
+                    k, v, myval))
         return True
 
 class DummyResource:
@@ -512,8 +608,8 @@ class DummyResource:
 
 DummyModel = DummyResource # b/w compat (forever)
 
+@implementer(ISession)
 class DummySession(dict):
-    implements(ISession)
     created = None
     new = True
     def changed(self):
@@ -536,18 +632,24 @@ class DummySession(dict):
         return storage
 
     def new_csrf_token(self):
-        token = 'csrft'
+        token = '0123456789012345678901234567890123456789'
         self['_csrft_'] = token
         return token
 
     def get_csrf_token(self):
-        return self.get('_csrft_', None)
+        token = self.get('_csrft_', None)
+        if token is None:
+            token = self.new_csrf_token()
+        return token
+
         
-class DummyRequest(object):
-    """ A dummy request object (imitates a :term:`request` object).
+@implementer(IRequest)
+class DummyRequest(DeprecatedRequestMethodsMixin, URLMethodsMixin,
+                   CallbackMethodsMixin):
+    """ A DummyRequest object (incompletely) imitates a :term:`request` object.
 
     The ``params``, ``environ``, ``headers``, ``path``, and
-    ``cookies`` arguments correspond to their :term`WebOb`
+    ``cookies`` arguments correspond to their :term:`WebOb`
     equivalents.
 
     The ``post`` argument,  if passed, populates the request's
@@ -558,15 +660,27 @@ class DummyRequest(object):
     Extra keyword arguments are assigned as attributes of the request
     itself.
 
+    Note that DummyRequest does not have complete fidelity with a "real"
+    request.  For example, by default, the DummyRequest ``GET`` and ``POST``
+    attributes are of type ``dict``, unlike a normal Request's GET and POST,
+    which are of type ``MultiDict``. If your code uses the features of
+    MultiDict, you should either use a"real" :class:`pyramid.request.Request`
+    or adapt your DummyRequest by replacing the attributes with ``MultiDict``
+    instances.
+
+    Other similar incompatibilities exist.  If you need all the features of
+    a Request, use the :class:`pyramid.request.Request` class itself rather
+    than this class while writing tests.
     """
-    implements(IRequest)
     method = 'GET'
     application_url = 'http://example.com'
     host = 'example.com:80'
     content_length = 0
     query_string = ''
-    response_callbacks = ()
     charset = 'UTF-8'
+    script_name = ''
+    _registry = None
+
     def __init__(self, params=None, environ=None, headers=None, path='/',
                  cookies=None, post=None, **kw):
         if environ is None:
@@ -604,16 +718,31 @@ class DummyRequest(object):
         self.root = None
         self.virtual_root = None
         self.marshalled = params # repoze.monty
-        self.registry = get_current_registry()
         self.session = DummySession()
         self.__dict__.update(kw)
 
-    def add_response_callback(self, callback):
-        if not self.response_callbacks:
-            self.response_callbacks = []
-        self.response_callbacks.append(callback)
+    def _get_registry(self):
+        if self._registry is None:
+            return get_current_registry()
+        return self._registry
 
-def setUp(registry=None, request=None, hook_zca=True, autocommit=True):
+    def _set_registry(self, registry):
+        self._registry = registry
+
+    def _del_registry(self):
+        self._registry = None
+
+    registry = property(_get_registry, _set_registry, _del_registry)
+
+    @reify
+    def response(self):
+        f =  self.registry.queryUtility(IResponseFactory, default=Response)
+        return f()
+
+have_zca = True
+
+def setUp(registry=None, request=None, hook_zca=True, autocommit=True,
+          settings=None):
     """
     Set :app:`Pyramid` registry and request thread locals for the
     duration of a single unit test.
@@ -621,21 +750,17 @@ def setUp(registry=None, request=None, hook_zca=True, autocommit=True):
     Use this function in the ``setUp`` method of a unittest test case
     which directly or indirectly uses:
 
-    - any of the ``register*`` functions in :mod:`pyramid.testing`
-      (such as :func:`pyramid.testing.registerResources`)
-
     - any method of the :class:`pyramid.config.Configurator`
       object returned by this function.
 
     - the :func:`pyramid.threadlocal.get_current_registry` or
       :func:`pyramid.threadlocal.get_current_request` functions.
 
-    If you use the ``testing.register*`` APIs, or the
-    ``get_current_*`` functions (or call :app:`Pyramid` code that
-    uses these functions) without calling ``setUp``,
-    :func:`pyramid.threadlocal.get_current_registry` will return a
-    *global* :term:`application registry`, which may cause unit tests
-    to not be isolated with respect to registrations they perform.
+    If you use the ``get_current_*`` functions (or call :app:`Pyramid` code
+    that uses these functions) without calling ``setUp``,
+    :func:`pyramid.threadlocal.get_current_registry` will return a *global*
+    :term:`application registry`, which may cause unit tests to not be
+    isolated with respect to registrations they perform.
 
     If the ``registry`` argument is ``None``, a new empty
     :term:`application registry` will be created (an instance of the
@@ -661,6 +786,9 @@ def setUp(registry=None, request=None, hook_zca=True, autocommit=True):
     :mod:`zope.component` package cannot be imported, or if
     ``hook_zca`` is ``False``, the hook will not be set.
 
+    If ``settings`` is not None, it must be a dictionary representing the
+    values passed to a Configurator as its ``settings=`` argument.
+
     This function returns an instance of the
     :class:`pyramid.config.Configurator` class, which can be
     used for further configuration to set up an environment suitable
@@ -674,6 +802,10 @@ def setUp(registry=None, request=None, hook_zca=True, autocommit=True):
     if registry is None:
         registry = Registry('testing')
     config = Configurator(registry=registry, autocommit=autocommit)
+    if settings is None:
+        settings = {}
+    if getattr(registry, 'settings', None) is None:
+        config._set_settings(settings)
     if hasattr(registry, 'registerUtility'):
         # Sometimes nose calls us with a non-registry object because
         # it thinks this function is module test setup.  Likewise,
@@ -693,7 +825,12 @@ def setUp(registry=None, request=None, hook_zca=True, autocommit=True):
             # any existing renderer factory lookup system.
             config.add_renderer(name, renderer)
     config.commit()
-    hook_zca and config.hook_zca()
+    global have_zca
+    try:
+        have_zca and hook_zca and config.hook_zca()
+    except ImportError: # pragma: no cover
+        # (dont choke on not being able to import z.component)
+        have_zca = False
     config.begin(request=request)
     return config
 
@@ -708,12 +845,13 @@ def tearDown(unhook_zca=True):
     argument ``hook_zca=True``.  If :mod:`zope.component` cannot be
     imported, ignore the argument.
     """
-    if unhook_zca:
+    global have_zca
+    if unhook_zca and have_zca:
         try:
             from zope.component import getSiteManager
             getSiteManager.reset()
         except ImportError: # pragma: no cover
-            pass
+            have_zca = False
     info = manager.pop()
     manager.clear()
     if info is not None:
@@ -727,7 +865,6 @@ def tearDown(unhook_zca=True):
                 # however maybe somebody's using a registry we don't
                 # understand, let's not blow up
                 pass
-    _clearContext() # XXX why?
 
 def cleanUp(*arg, **kw):
     """ :func:`pyramid.testing.cleanUp` is an alias for
@@ -736,7 +873,7 @@ def cleanUp(*arg, **kw):
 
 class DummyRendererFactory(object):
     """ Registered by
-    ``pyramid.config.Configurator.testing_add_renderer`` as
+    :meth:`pyramid.config.Configurator.testing_add_renderer` as
     a dummy renderer factory.  The indecision about what to use as a
     key (a spec vs. a relative name) is caused by test suites in the
     wild believing they can register either.  The ``factory`` argument
@@ -781,22 +918,26 @@ class MockTemplate(object):
         self._received.update(kw)
         return self.response
 
-def skip_on(*platforms):
+def skip_on(*platforms): # pragma: no  cover
+    skip = False
+    for platform in platforms:
+        if skip_on.os_name.startswith(platform):
+            skip = True
+        if platform == 'pypy' and PYPY:
+            skip = True
+        if platform == 'py3' and PY3:
+            skip = True
     def decorator(func):
-        def wrapper(*args, **kw):
-            for platform in platforms:
-                if skip_on.os_name.startswith(platform):
+        if isinstance(func, class_types):
+            if skip: return None
+            else: return func
+        else:
+            def wrapper(*args, **kw):
+                if skip:
                     return
-                if platform == 'pypy' and skip_on.pypy: # pragma: no cover
-                    return
-            return func(*args, **kw)
-        wrapper.__name__ = func.__name__
-        wrapper.__doc__ = func.__doc__
-        return wrapper
+                return func(*args, **kw)
+            wrapper.__name__ = func.__name__
+            wrapper.__doc__ = func.__doc__
+            return wrapper
     return decorator
 skip_on.os_name = os.name # for testing
-try: # pragma: no cover
-    import __pypy__
-    skip_on.pypy = True
-except ImportError:
-    skip_on.pypy = False

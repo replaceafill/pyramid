@@ -10,31 +10,32 @@ Request and Response Objects
 .. note:: This chapter is adapted from a portion of the :term:`WebOb`
    documentation, originally written by Ian Bicking.
 
-:app:`Pyramid` uses the :term:`WebOb` package to supply
+:app:`Pyramid` uses the :term:`WebOb` package as a basis for its
 :term:`request` and :term:`response` object implementations.  The
-:term:`request` object that is passed to a :app:`Pyramid`
-:term:`view` is an instance of the :class:`pyramid.request.Request`
-class, which is a subclass of :class:`webob.Request`.  The
-:term:`response` returned from a :app:`Pyramid` :term:`view`
-:term:`renderer` is an instance of the :mod:`webob.Response` class.
-Users can also return an instance of :mod:`webob.Response` directly
-from a view as necessary.
+:term:`request` object that is passed to a :app:`Pyramid` :term:`view` is an
+instance of the :class:`pyramid.request.Request` class, which is a subclass
+of :class:`webob.Request`.  The :term:`response` returned from a
+:app:`Pyramid` :term:`view` :term:`renderer` is an instance of the
+:mod:`pyramid.response.Response` class, which is a subclass of the
+:class:`webob.Response` class.  Users can also return an instance of
+:class:`pyramid.response.Response` directly from a view as necessary.
 
-WebOb is a project separate from :app:`Pyramid` with a separate set
-of authors and a fully separate `set of documentation
-<http://pythonpaste.org/webob/>`_.
+WebOb is a project separate from :app:`Pyramid` with a separate set of
+authors and a fully separate `set of documentation
+<http://docs.webob.org/en/latest/index.html>`_.  Pyramid adds some
+functionality to the standard WebOb request, which is documented in the
+:ref:`request_module` API documentation.
 
-WebOb provides objects for HTTP requests and responses.  Specifically
-it does this by wrapping the `WSGI <http://wsgi.org>`_ request
-environment and response status/headers/app_iter (body).
+WebOb provides objects for HTTP requests and responses.  Specifically it does
+this by wrapping the `WSGI <http://wsgi.org>`_ request environment and
+response status, header list, and app_iter (body) values.
 
-WebOb request and response objects provide many conveniences for
-parsing WSGI requests and forming WSGI responses.  WebOb is a nice way
-to represent "raw" WSGI requests and responses; however, we won't
-cover that use case in this document, as users of :app:`Pyramid`
-don't typically need to use the WSGI-related features of WebOb
-directly.  The `reference documentation
-<http://pythonpaste.org/webob/reference.html>`_ shows many examples of
+WebOb request and response objects provide many conveniences for parsing WSGI
+requests and forming WSGI responses.  WebOb is a nice way to represent "raw"
+WSGI requests and responses; however, we won't cover that use case in this
+document, as users of :app:`Pyramid` don't typically need to use the
+WSGI-related features of WebOb directly.  The `reference documentation
+<http://docs.webob.org/en/latest/reference.html>`_ shows many examples of
 creating requests and using response objects in this manner, however.
 
 .. index::
@@ -77,6 +78,10 @@ object:
     ``PUT``.  You can also get ``req.body_file`` for a file-like
     object.
 
+``req.json_body``
+    The JSON-decoded contents of the body of the request. See
+    :ref:`request_json_body`.
+
 ``req.cookies``:
     A simple dictionary of all the cookies.
 
@@ -109,11 +114,11 @@ instance, ``req.if_modified_since`` returns a `datetime
 Special Attributes Added to the Request by :app:`Pyramid`
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-In addition to the standard :term:`WebOb` attributes, :app:`Pyramid`
-adds special attributes to every request: ``context``, ``registry``,
-``root``, ``subpath``, ``traversed``, ``view_name``, ``virtual_root``, 
-``virtual_root_path``, ``session``, and ``tmpl_context``.  These
-attributes are documented further within the
+In addition to the standard :term:`WebOb` attributes, :app:`Pyramid` adds
+special attributes to every request: ``context``, ``registry``, ``root``,
+``subpath``, ``traversed``, ``view_name``, ``virtual_root``,
+``virtual_root_path``, ``session``, ``matchdict``, and ``matched_route``.
+These attributes are documented further within the
 :class:`pyramid.request.Request` API documentation.
 
 .. index::
@@ -168,9 +173,9 @@ of the request.  I'll show various values for an example URL
 Methods
 +++++++
 
-There are `several methods
-<http://pythonpaste.org/webob/class-webob.Request.html#__init__>`_ but
-only a few you'll use often:
+There are methods of request objects documented in
+:class:`pyramid.request.Request` but you'll find that you won't use very many
+of them.  Here are a couple that might be useful:
 
 ``Request.blank(base_url)``:
     Creates a new request with blank information, based at the given
@@ -181,9 +186,9 @@ only a few you'll use often:
     subrequests).
 
 ``req.get_response(wsgi_application)``:
-    This method calls the given WSGI application with this request,
-    and returns a `Response`_ object.  You can also use this for
-    subrequests, or testing.
+    This method calls the given WSGI application with this request, and
+    returns a :class:`pyramid.response.Response` object.  You can also use
+    this for subrequests, or testing.
 
 .. index::
    single: request (and unicode)
@@ -206,6 +211,152 @@ If it is set, then ``req.POST``, ``req.GET``, ``req.params``, and
 corresponding ``req.str_*`` (e.g., ``req.str_POST``) that is always
 a ``str``, and never unicode.
 
+.. index::
+   single: multidict (WebOb)
+
+.. _multidict_narr:
+
+Multidict
++++++++++
+
+Several attributes of a WebOb request are "multidict"; structures (such as
+``request.GET``, ``request.POST``, and ``request.params``).  A multidict is a
+dictionary where a key can have multiple values.  The quintessential example
+is a query string like ``?pref=red&pref=blue``; the ``pref`` variable has two
+values: ``red`` and ``blue``.
+
+In a multidict, when you do ``request.GET['pref']`` you'll get back
+only ``'blue'`` (the last value of ``pref``).  Sometimes returning a
+string, and sometimes returning a list, is the cause of frequent
+exceptions.  If you want *all* the values back, use
+``request.GET.getall('pref')``.  If you want to be sure there is *one
+and only one* value, use ``request.GET.getone('pref')``, which will
+raise an exception if there is zero or more than one value for
+``pref``.
+
+When you use operations like ``request.GET.items()`` you'll get back
+something like ``[('pref', 'red'), ('pref', 'blue')]``.  All the
+key/value pairs will show up.  Similarly ``request.GET.keys()``
+returns ``['pref', 'pref']``.  Multidict is a view on a list of
+tuples; all the keys are ordered, and all the values are ordered.
+
+API documentation for a multidict exists as
+:class:`pyramid.interfaces.IMultiDict`.
+
+.. index::
+   pair: json_body; request
+
+.. _request_json_body:
+
+Dealing With A JSON-Encoded Request Body
+++++++++++++++++++++++++++++++++++++++++
+
+.. note:: this feature is new as of Pyramid 1.1.
+
+:attr:`pyramid.request.Request.json_body` is a property that returns a
+:term:`JSON` -decoded representation of the request body.  If the request
+does not have a body, or the body is not a properly JSON-encoded value, an
+exception will be raised when this attribute is accessed.
+
+This attribute is useful when you invoke a Pyramid view callable via
+e.g. jQuery's ``$.ajax`` function, which has the potential to send a request
+with a JSON-encoded body.
+
+Using ``request.json_body`` is equivalent to:
+
+.. code-block:: python
+
+   from json import loads
+   loads(request.body, encoding=request.charset)
+
+Here's how to construct an AJAX request in Javascript using :term:`jQuery`
+that allows you to use the ``request.json_body`` attribute when the request
+is sent to a Pyramid application:
+
+.. code-block:: javascript
+
+    jQuery.ajax({type:'POST', 
+                 url: 'http://localhost:6543/', // the pyramid server
+                 data: JSON.stringify({'a':1}), 
+                 contentType: 'application/json; charset=utf-8'});
+
+When such a request reaches a view in your application, the
+``request.json_body`` attribute will be available in the view callable body.
+
+.. code-block:: javascript
+
+    @view_config(renderer='string')
+    def aview(request):
+        print request.json_body
+        return 'OK'
+
+For the above view, printed to the console will be:
+
+.. code-block:: python
+
+    {u'a': 1}
+
+For bonus points, here's a bit of client-side code that will produce a
+request that has a body suitable for reading via ``request.json_body`` using
+Python's ``urllib2`` instead of a Javascript AJAX request:
+
+.. code-block:: python
+
+    import urllib2
+    import json        
+
+    json_payload = json.dumps({'a':1})
+    headers = {'Content-Type':'application/json; charset=utf-8'}
+    req = urllib2.Request('http://localhost:6543/', json_payload, headers)
+    resp = urllib2.urlopen(req)
+
+.. index::
+   single: cleaning up after request
+
+.. _cleaning_up_after_a_request:
+
+Cleaning Up After a Request
++++++++++++++++++++++++++++
+
+Sometimes it's required that some cleanup be performed at the end of a
+request when a database connection is involved.  
+
+For example, let's say you have a ``mypackage`` :app:`Pyramid` application
+package that uses SQLAlchemy, and you'd like the current SQLAlchemy database
+session to be removed after each request.  Put the following in the
+``mypackage.__init__`` module:
+
+.. ignore-next-block
+.. code-block:: python
+   :linenos:
+
+   from mypackage.models import DBSession
+
+   from pyramid.events import subscriber
+   from pyramid.events import NewRequest
+
+   def cleanup_callback(request):
+       DBSession.remove()
+
+   @subscriber(NewRequest)
+   def add_cleanup_callback(event):
+       event.request.add_finished_callback(cleanup_callback)
+
+Registering the ``cleanup_callback`` finished callback at the start of a
+request (by causing the ``add_cleanup_callback`` to receive a
+:class:`pyramid.events.NewRequest` event at the start of each request) will
+cause the DBSession to be removed whenever request processing has ended.
+Note that in the example above, for the :class:`pyramid.events.subscriber`
+decorator to "work", the :meth:`pyramid.config.Configurator.scan` method must
+be called against your ``mypackage`` package during application
+initialization.
+
+.. note:: This is only an example.  In particular, it is not necessary to
+   cause ``DBSession.remove`` to be called in an application generated from
+   any :app:`Pyramid` scaffold, because these all use the ``pyramid_tm``
+   package.  The cleanup done by ``DBSession.remove`` is unnecessary when
+   ``pyramid_tm`` middleware is configured into the application.
+
 More Details
 ++++++++++++
 
@@ -213,8 +364,8 @@ More detail about the request object API is available in:
 
 - The :class:`pyramid.request.Request` API documentation.
 
-- The `WebOb documentation <http://pythonpaste.org/webob>`_.  All
-  methods and attributes of a ``webob.Request`` documented within the
+- The `WebOb documentation <http://docs.webob.org/en/latest/index.html>`_.
+  All methods and attributes of a ``webob.Request`` documented within the
   WebOb documentation will work with request objects created by
   :app:`Pyramid`.
 
@@ -225,8 +376,10 @@ Response
 ~~~~~~~~
 
 The :app:`Pyramid` response object can be imported as
-:class:`pyramid.response.Response`.  This import location is merely a facade
-for its original location: ``webob.Response``.
+:class:`pyramid.response.Response`.  This class is a subclass of the
+``webob.Response`` class.  The subclass does not add or change any
+functionality, so the WebOb Response documentation will be completely
+relevant for this class as well.
 
 A response object has three fundamental parts:
 
@@ -249,8 +402,8 @@ A response object has three fundamental parts:
     ``response.body_file`` (a file-like object; writing to it appends
     to ``app_iter``).
 
-Everything else in the object derives from this underlying state.
-Here's the highlights:
+Everything else in the object typically derives from this underlying state.
+Here are some highlights:
 
 ``response.content_type``
     The content type *not* including the ``charset`` parameter.
@@ -296,7 +449,7 @@ properties.  These are parsed, so you can do things like
 ``response.last_modified = os.path.getmtime(filename)``.
 
 The details are available in the `extracted Response documentation
-<http://pythonpaste.org/webob/class-webob.Response.html>`_.
+<http://docs.webob.org/en/latest/modules/webob.html#headers>`_.
 
 .. index::
    single: response (creating)
@@ -319,22 +472,24 @@ anything, though if you subclass :class:`pyramid.response.Response` and set
 ``default_content_type`` you can override this behavior.
 
 .. index::
-   single: response exceptions
+   single: exception responses
 
 Exception Responses
 +++++++++++++++++++
 
 To facilitate error responses like ``404 Not Found``, the module
-:mod:`webob.exc` contains classes for each kind of error response.  These
-include boring, but appropriate error bodies.  The exceptions exposed by this
-module, when used under :app:`Pyramid`, should be imported from the
-:mod:`pyramid.httpexceptions` "facade" module.  This import location is merely
-a facade for the original location of these exceptions: ``webob.exc``.
+:mod:`pyramid.httpexceptions` contains classes for each kind of error
+response.  These include boring, but appropriate error bodies.  The
+exceptions exposed by this module, when used under :app:`Pyramid`, should be
+imported from the :mod:`pyramid.httpexceptions` module.  This import location
+contains subclasses and replacements that mirror those in the ``webob.exc``
+module.
 
-Each class is named ``pyramid.httpexceptions.HTTP*``, where ``*`` is the reason
-for the error.  For instance, :class:`pyramid.httpexceptions.HTTPNotFound`.  It
-subclasses :class:`pyramid.Response`, so you can manipulate the instances in
-the same way.  A typical example is:
+Each class is named ``pyramid.httpexceptions.HTTP*``, where ``*`` is the
+reason for the error.  For instance,
+:class:`pyramid.httpexceptions.HTTPNotFound` subclasses
+:class:`pyramid.Response`, so you can manipulate the instances in the same
+way.  A typical example is:
 
 .. ignore-next-block
 .. code-block:: python
@@ -347,59 +502,12 @@ the same way.  A typical example is:
     # or:
     response = HTTPMovedPermanently(location=new_url)
 
-These are not exceptions unless you are using Python 2.5+, because
-they are new-style classes which are not allowed as exceptions until
-Python 2.5.  To get an exception object use ``response.exception``.
-You can use this like:
-
-.. code-block:: python
-   :linenos:
-
-   from pyramid.httpexceptions import HTTPException
-   from pyramid.httpexceptions import HTTPNotFound
-
-   def aview(request):
-       try:
-           # ... stuff ...
-           raise HTTPNotFound('No such resource').exception
-       except HTTPException, e:
-           return request.get_response(e)
-
-The exceptions are still WSGI applications, but you cannot set
-attributes like ``content_type``, ``charset``, etc. on these exception
-objects.
-
-.. index::
-   single: multidict (WebOb)
-
 More Details
 ++++++++++++
 
 More details about the response object API are available in the
-:mod:`pyramid.response` documentation.  More details about exception responses
-are in the :mod:`pyramid.httpexceptions` API documentation.  The `WebOb
-documentation <http://pythonpaste.org/webob>`_ is also useful.
-
-Multidict
-~~~~~~~~~
-
-Several parts of WebOb use a "multidict"; this is a dictionary where a
-key can have multiple values.  The quintessential example is a query
-string like ``?pref=red&pref=blue``; the ``pref`` variable has two
-values: ``red`` and ``blue``.
-
-In a multidict, when you do ``request.GET['pref']`` you'll get back
-only ``'blue'`` (the last value of ``pref``).  Sometimes returning a
-string, and sometimes returning a list, is the cause of frequent
-exceptions.  If you want *all* the values back, use
-``request.GET.getall('pref')``.  If you want to be sure there is *one
-and only one* value, use ``request.GET.getone('pref')``, which will
-raise an exception if there is zero or more than one value for
-``pref``.
-
-When you use operations like ``request.GET.items()`` you'll get back
-something like ``[('pref', 'red'), ('pref', 'blue')]``.  All the
-key/value pairs will show up.  Similarly ``request.GET.keys()``
-returns ``['pref', 'pref']``.  Multidict is a view on a list of
-tuples; all the keys are ordered, and all the values are ordered.
+:mod:`pyramid.response` documentation.  More details about exception
+responses are in the :mod:`pyramid.httpexceptions` API documentation.  The
+`WebOb documentation <http://docs.webob.org/en/latest/index.html>`_ is also
+useful.
 

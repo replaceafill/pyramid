@@ -1,15 +1,20 @@
 import unittest
-
+import transaction
 from pyramid import testing
 
 def _initTestingDB():
-    from tutorial.models import DBSession
-    from tutorial.models import Base
     from sqlalchemy import create_engine
+    from tutorial.models import (
+        DBSession,
+        Page,
+        Base
+        )
     engine = create_engine('sqlite://')
-    DBSession.configure(bind=engine)
-    Base.metadata.bind = engine
     Base.metadata.create_all(engine)
+    DBSession.configure(bind=engine)
+    with transaction.manager:
+        model = Page('FrontPage', 'This is the front page')
+        DBSession.add(model)
     return DBSession
 
 def _registerRoutes(config):
@@ -20,15 +25,20 @@ def _registerRoutes(config):
 class ViewWikiTests(unittest.TestCase):
     def setUp(self):
         self.config = testing.setUp()
+        self.session = _initTestingDB()
 
     def tearDown(self):
+        self.session.remove()
         testing.tearDown()
-        
-    def test_it(self):
+
+    def _callFUT(self, request):
         from tutorial.views import view_wiki
-        self.config.add_route('view_page', '{pagename}')
+        return view_wiki(request)
+
+    def test_it(self):
+        _registerRoutes(self.config)
         request = testing.DummyRequest()
-        response = view_wiki(request)
+        response = self._callFUT(request)
         self.assertEqual(response.location, 'http://example.com/FrontPage')
 
 class ViewPageTests(unittest.TestCase):
@@ -69,7 +79,6 @@ class AddPageTests(unittest.TestCase):
     def setUp(self):
         self.session = _initTestingDB()
         self.config = testing.setUp()
-        self.config.begin()
 
     def tearDown(self):
         self.session.remove()

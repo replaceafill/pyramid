@@ -1,154 +1,36 @@
+# -*- coding: utf-8 -*-
 import os
-import pkg_resources
-from urlparse import urljoin
-from urlparse import urlparse
 
-from paste import httpexceptions
-from paste import request
-from paste.httpheaders import ETAG
-from paste.urlparser import StaticURLParser
+from os.path import (
+    normcase,
+    normpath,
+    join,
+    isdir,
+    exists,
+    )
 
-from zope.interface import implements
+from pkg_resources import (
+    resource_exists,
+    resource_filename,
+    resource_isdir,
+    )
+
+from repoze.lru import lru_cache
 
 from pyramid.asset import resolve_asset_spec
-from pyramid.interfaces import IStaticURLInfo
+
+from pyramid.compat import text_
+
+from pyramid.httpexceptions import (
+    HTTPNotFound,
+    HTTPMovedPermanently,
+    )
+
 from pyramid.path import caller_package
-from pyramid.url import route_url
+from pyramid.response import FileResponse
+from pyramid.traversal import traversal_path_info
 
-class PackageURLParser(StaticURLParser):
-    """ This probably won't work with zipimported resources """
-    def __init__(self, package_name, resource_name, root_resource=None,
-                 cache_max_age=None):
-        self.package_name = package_name
-        self.resource_name = os.path.normpath(resource_name)
-        if root_resource is None:
-            root_resource = self.resource_name
-        self.root_resource = root_resource
-        self.cache_max_age = cache_max_age
-
-    def __call__(self, environ, start_response):
-        path_info = environ.get('PATH_INFO', '')
-        if not path_info:
-            return self.add_slash(environ, start_response)
-        if path_info == '/':
-            # @@: This should obviously be configurable
-            filename = 'index.html'
-        else:
-            filename = request.path_info_pop(environ)
-        resource = os.path.normcase(os.path.normpath(
-                    self.resource_name + '/' + filename))
-        if ( (self.root_resource is not None) and
-            (not resource.startswith(self.root_resource)) ):
-            # Out of bounds
-            return self.not_found(environ, start_response)
-        if not pkg_resources.resource_exists(self.package_name, resource):
-            return self.not_found(environ, start_response)
-        if pkg_resources.resource_isdir(self.package_name, resource):
-            # @@: Cache?
-            child_root = (self.root_resource is not None and
-                          self.root_resource or self.resource_name)
-            return self.__class__(
-                self.package_name, resource, root_resource=child_root,
-                cache_max_age=self.cache_max_age)(environ, start_response)
-        if (environ.get('PATH_INFO')
-            and environ.get('PATH_INFO') != '/'): # pragma: no cover
-            return self.error_extra_path(environ, start_response) 
-        full = pkg_resources.resource_filename(self.package_name, resource)
-        if_none_match = environ.get('HTTP_IF_NONE_MATCH')
-        if if_none_match:
-            mytime = os.stat(full).st_mtime
-            if str(mytime) == if_none_match:
-                headers = []
-                ETAG.update(headers, mytime)
-                start_response('304 Not Modified', headers)
-                return [''] # empty body
-
-        fa = self.make_app(full)
-        if self.cache_max_age:
-            fa.cache_control(max_age=self.cache_max_age)
-        return fa(environ, start_response)
-
-    def not_found(self, environ, start_response, debug_message=None):
-        comment=('SCRIPT_NAME=%r; PATH_INFO=%r; looking in package %s; '
-                 'subdir %s ;debug: %s' % (environ.get('SCRIPT_NAME'),
-                                           environ.get('PATH_INFO'),
-                                           self.package_name,
-                                           self.resource_name,
-                                           debug_message or '(none)'))
-        exc = httpexceptions.HTTPNotFound(
-            'The resource at %s could not be found'
-            % request.construct_url(environ),
-            comment=comment)
-        return exc.wsgi_application(environ, start_response)
-
-    def __repr__(self):
-        return '<%s %s:%s at %s>' % (self.__class__.__name__, self.package_name,
-                                     self.root_resource, id(self))
-
-class StaticURLInfo(object):
-    implements(IStaticURLInfo)
-
-    route_url = staticmethod(route_url) # for testing only
-
-    def __init__(self, config):
-        self.config = config
-        self.registrations = []
-
-    def generate(self, path, request, **kw):
-        for (name, spec, is_url) in self.registrations:
-            if path.startswith(spec):
-                subpath = path[len(spec):]
-                if is_url:
-                    return urljoin(name, subpath)
-                else:
-                    kw['subpath'] = subpath
-                    return self.route_url(name, request, **kw)
-
-        raise ValueError('No static URL definition matching %s' % path)
-
-    def add(self, name, spec, **extra):
-        # This feature only allows for the serving of a directory and
-        # the files contained within, not of a single asset;
-        # appending a slash here if the spec doesn't have one is
-        # required for proper prefix matching done in ``generate``
-        # (``subpath = path[len(spec):]``).
-        if not spec.endswith('/'):
-            spec = spec + '/'
-
-        # we also make sure the name ends with a slash, purely as a
-        # convenience: a name that is a url is required to end in a
-        # slash, so that ``urljoin(name, subpath))`` will work above
-        # when the name is a URL, and it doesn't hurt things for it to
-        # have a name that ends in a slash if it's used as a route
-        # name instead of a URL.
-        if not name.endswith('/'):
-            # make sure it ends with a slash
-            name = name + '/'
-
-        names = [ t[0] for t in self.registrations ]
-
-        if name in names:
-            idx = names.index(name)
-            self.registrations.pop(idx)
-
-        if urlparse(name)[0]:
-            # it's a URL
-            self.registrations.append((name, spec, True))
-        else:
-            # it's a view name
-            cache_max_age = extra.pop('cache_max_age', None)
-            view = static_view(spec, cache_max_age=cache_max_age)
-            # register a route using this view
-            permission = extra.pop('permission', '__no_permission_required__')
-            self.config.add_route(
-                name,
-                "%s*subpath" % name, # name already ends with slash
-                view=view,
-                view_for=self.__class__,
-                view_permission=permission,
-                factory=lambda *x: self,
-                )
-            self.registrations.append((name, spec, False))
+slash = text_('/')
 
 class static_view(object):
     """ An instance of this class is a callable which can act as a
@@ -178,36 +60,97 @@ class static_view(object):
     response headers returned by the view (default is 3600 seconds or
     five minutes).
 
-    .. note:: If the ``root_dir`` is relative to a :term:`package`, or
-         is a :term:`asset specification` the :app:`Pyramid`
-         ``asset`` ZCML directive or
-         :class:`pyramid.config.Configurator` method can be
-         used to override assets within the named ``root_dir``
-         package-relative directory.  However, if the ``root_dir`` is
-         absolute, configuration will not be able to
-         override the assets it contains.  """
-    
-    def __init__(self, root_dir, cache_max_age=3600, package_name=None):
+    ``use_subpath`` influences whether ``request.subpath`` will be used as
+    ``PATH_INFO`` when calling the underlying WSGI application which actually
+    serves the static files.  If it is ``True``, the static application will
+    consider ``request.subpath`` as ``PATH_INFO`` input.  If it is ``False``,
+    the static application will consider request.environ[``PATH_INFO``] as
+    ``PATH_INFO`` input. By default, this is ``False``.
+
+    .. note::
+
+       If the ``root_dir`` is relative to a :term:`package`, or is a
+       :term:`asset specification` the :app:`Pyramid`
+       :class:`pyramid.config.Configurator` method can be used to override
+       assets within the named ``root_dir`` package-relative directory.
+       However, if the ``root_dir`` is absolute, configuration will not be able
+       to override the assets it contains.
+    """
+
+    def __init__(self, root_dir, cache_max_age=3600, package_name=None,
+                 use_subpath=False, index='index.html'):
         # package_name is for bw compat; it is preferred to pass in a
         # package-relative path as root_dir
         # (e.g. ``anotherpackage:foo/static``).
-        caller_package_name = caller_package().__name__
-        package_name = package_name or caller_package_name
-        package_name, root_dir = resolve_asset_spec(root_dir, package_name)
+        self.cache_max_age = cache_max_age
         if package_name is None:
-            app = StaticURLParser(root_dir, cache_max_age=cache_max_age)
-        else:
-            app = PackageURLParser(
-                package_name, root_dir, cache_max_age=cache_max_age)
-        self.app = app
+            package_name = caller_package().__name__
+        package_name, docroot = resolve_asset_spec(root_dir, package_name)
+        self.use_subpath = use_subpath
+        self.package_name = package_name
+        self.docroot = docroot
+        self.norm_docroot = normcase(normpath(docroot))
+        self.index = index
 
     def __call__(self, context, request):
-        subpath = '/'.join(request.subpath)
-        request_copy = request.copy()
-        # Fix up PATH_INFO to get rid of everything but the "subpath"
-        # (the actual path to the file relative to the root dir).
-        request_copy.environ['PATH_INFO'] = '/' + subpath
-        # Zero out SCRIPT_NAME for good measure.
-        request_copy.environ['SCRIPT_NAME'] = ''
-        return request_copy.get_response(self.app)
+        if self.use_subpath:
+            path_tuple = request.subpath
+        else:
+            path_tuple = traversal_path_info(request.environ['PATH_INFO'])
+
+        path = _secure_path(path_tuple)
+
+        if path is None:
+            raise HTTPNotFound('Out of bounds: %s' % request.url)
+
+        if self.package_name: # package resource
+
+            resource_path ='%s/%s' % (self.docroot.rstrip('/'), path)
+            if resource_isdir(self.package_name, resource_path):
+                if not request.path_url.endswith('/'):
+                    self.add_slash_redirect(request)
+                resource_path = '%s/%s' % (resource_path.rstrip('/'),self.index)
+            if not resource_exists(self.package_name, resource_path):
+                raise HTTPNotFound(request.url)
+            filepath = resource_filename(self.package_name, resource_path)
+
+        else: # filesystem file
+
+            # os.path.normpath converts / to \ on windows
+            filepath = normcase(normpath(join(self.norm_docroot, path)))
+            if isdir(filepath):
+                if not request.path_url.endswith('/'):
+                    self.add_slash_redirect(request)
+                filepath = join(filepath, self.index)
+            if not exists(filepath):
+                raise HTTPNotFound(request.url)
+
+        return FileResponse(filepath, request, self.cache_max_age)
+
+    def add_slash_redirect(self, request):
+        url = request.path_url + '/'
+        qs = request.query_string
+        if qs:
+            url = url + '?' + qs
+        raise HTTPMovedPermanently(url)
+
+_seps = set(['/', os.sep])
+def _contains_slash(item):
+    for sep in _seps:
+        if sep in item:
+            return True
+
+_has_insecure_pathelement = set(['..', '.', '']).intersection
+
+@lru_cache(1000)
+def _secure_path(path_tuple):
+    if _has_insecure_pathelement(path_tuple):
+        # belt-and-suspenders security; this should never be true
+        # unless someone screws up the traversal_path code
+        # (request.subpath is computed via traversal_path too)
+        return None
+    if any([_contains_slash(item) for item in path_tuple]):
+        return None
+    encoded = slash.join(path_tuple) # will be unicode
+    return encoded
 

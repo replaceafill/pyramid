@@ -1,14 +1,15 @@
-import transaction
+from sqlalchemy import (
+    Column,
+    Integer,
+    Text,
+    )
 
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import Text
-
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import (
+    scoped_session,
+    sessionmaker,
+    )
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
@@ -23,18 +24,6 @@ class Page(Base):
     data = Column(Text)
 
     def __init__(self, name, data):
-       self.name = name
-       self.data = data
+        self.name = name
+        self.data = data
 
-def initialize_sql(engine):
-    DBSession.configure(bind=engine)
-    Base.metadata.bind = engine
-    Base.metadata.create_all(engine)
-    try:
-        session = DBSession()
-        page = Page('FrontPage', 'initial data')
-        session.add(page)
-        transaction.commit()
-    except IntegrityError:
-        # already created
-        pass

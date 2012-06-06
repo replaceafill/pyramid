@@ -1,17 +1,23 @@
 import gettext
 import os
 
-from translationstring import Translator
-from translationstring import Pluralizer
-from translationstring import TranslationString # API
-from translationstring import TranslationStringFactory # API
+from translationstring import (
+    Translator,
+    Pluralizer,
+    TranslationString, # API
+    TranslationStringFactory, # API
+    )
 
 TranslationString = TranslationString # PyFlakes
 TranslationStringFactory = TranslationStringFactory # PyFlakes
 
-from pyramid.interfaces import ILocalizer
-from pyramid.interfaces import ITranslationDirectories
-from pyramid.interfaces import ILocaleNegotiator
+from pyramid.compat import PY3
+
+from pyramid.interfaces import (
+    ILocalizer,
+    ITranslationDirectories,
+    ILocaleNegotiator,
+    )
 
 from pyramid.threadlocal import get_current_registry
 
@@ -145,6 +151,49 @@ def get_locale_name(request):
         request.locale_name = locale_name
     return locale_name
 
+def make_localizer(current_locale_name, translation_directories):
+    """ Create a :class:`pyramid.i18n.Localizer` object
+    corresponding to the provided locale name from the 
+    translations found in the list of translation directories."""
+    translations = Translations()
+    translations._catalog = {}
+
+    locales_to_try = []
+    if '_' in current_locale_name:
+        locales_to_try = [current_locale_name.split('_')[0]]
+    locales_to_try.append(current_locale_name)
+
+    # intent: order locales left to right in least specific to most specific,
+    # e.g. ['de', 'de_DE'].  This services the intent of creating a
+    # translations object that returns a "more specific" translation for a
+    # region, but will fall back to a "less specific" translation for the
+    # locale if necessary.  Ordering from least specific to most specific
+    # allows us to call translations.add in the below loop to get this
+    # behavior.
+
+    for tdir in translation_directories:
+        locale_dirs = []
+        for lname in locales_to_try:
+            ldir = os.path.realpath(os.path.join(tdir, lname))
+            if os.path.isdir(ldir):
+                locale_dirs.append(ldir)
+
+        for locale_dir in locale_dirs:
+            messages_dir = os.path.join(locale_dir, 'LC_MESSAGES')
+            if not os.path.isdir(os.path.realpath(messages_dir)):
+                continue
+            for mofile in os.listdir(messages_dir):
+                mopath = os.path.realpath(os.path.join(messages_dir,
+                                                       mofile))
+                if mofile.endswith('.mo') and os.path.isfile(mopath):
+                    with open(mopath, 'rb') as mofp:
+                        domain = mofile[:-3]
+                        dtrans = Translations(mofp, domain)
+                        translations.add(dtrans)
+
+    return Localizer(locale_name=current_locale_name,
+                          translations=translations)
+
 def get_localizer(request):
     """ Retrieve a :class:`pyramid.i18n.Localizer` object
     corresponding to the current request's locale name. """
@@ -162,29 +211,9 @@ def get_localizer(request):
 
     if localizer is None:
         # no localizer utility registered yet
-        translations = Translations()
-        translations._catalog = {}
         tdirs = registry.queryUtility(ITranslationDirectories, default=[])
-        for tdir in tdirs:
-            locale_dirs = [ (lname, os.path.join(tdir, lname)) for lname in
-                            os.listdir(tdir) ]
-            for locale_name, locale_dir in locale_dirs:
-                if locale_name != current_locale_name:
-                    continue
-                messages_dir = os.path.join(locale_dir, 'LC_MESSAGES')
-                if not os.path.isdir(os.path.realpath(messages_dir)):
-                    continue
-                for mofile in os.listdir(messages_dir):
-                    mopath = os.path.realpath(os.path.join(messages_dir,
-                                                           mofile))
-                    if mofile.endswith('.mo') and os.path.isfile(mopath):
-                        mofp = open(mopath, 'rb')
-                        domain = mofile[:-3]
-                        dtrans = Translations(mofp, domain)
-                        translations.add(dtrans)
-
-        localizer = Localizer(locale_name=current_locale_name,
-                              translations=translations)
+        localizer = make_localizer(current_locale_name, tdirs)
+        
         registry.registerUtility(localizer, ILocalizer,
                                  name=current_locale_name)
         request.localizer = localizer
@@ -202,8 +231,13 @@ class Translations(gettext.GNUTranslations, object):
         :param fileobj: the file-like object the translation should be read
                         from
         """
+        # germanic plural by default; self.plural will be overwritten by
+        # GNUTranslations._parse (called as a side effect if fileobj is
+        # passed to GNUTranslations.__init__) with a "real" self.plural for
+        # this domain; see https://github.com/Pylons/pyramid/issues/235
+        self.plural = lambda n: int(n != 1) 
         gettext.GNUTranslations.__init__(self, fp=fileobj)
-        self.files = filter(None, [getattr(fileobj, 'name', None)])
+        self.files = list(filter(None, [getattr(fileobj, 'name', None)]))
         self.domain = domain
         self._domains = {}
 
@@ -229,7 +263,8 @@ class Translations(gettext.GNUTranslations, object):
         filename = gettext.find(domain, dirname, locales)
         if not filename:
             return gettext.NullTranslations()
-        return cls(fileobj=open(filename, 'rb'), domain=domain)
+        with open(filename, 'rb') as fp:
+            return cls(fileobj=fp, domain=domain)
 
     def __repr__(self):
         return '<%s: "%s">' % (type(self).__name__,
@@ -299,7 +334,10 @@ class Translations(gettext.GNUTranslations, object):
         """Like ``ugettext()``, but look the message up in the specified
         domain.
         """
-        return self._domains.get(domain, self).ugettext(message)
+        if PY3: # pragma: no cover
+            return self._domains.get(domain, self).gettext(message)
+        else: # pragma: no cover
+            return self._domains.get(domain, self).ugettext(message)
     
     def dngettext(self, domain, singular, plural, num):
         """Like ``ngettext()``, but look the message up in the specified
@@ -317,5 +355,10 @@ class Translations(gettext.GNUTranslations, object):
         """Like ``ungettext()`` but look the message up in the specified
         domain.
         """
-        return self._domains.get(domain, self).ungettext(singular, plural, num)
+        if PY3: # pragma: no cover
+            return self._domains.get(domain, self).ngettext(
+                singular, plural, num)
+        else: # pragma: no cover
+            return self._domains.get(domain, self).ungettext(
+                singular, plural, num)
 

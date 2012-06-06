@@ -1,208 +1,123 @@
 import os
-import sys
-from code import interact
 
-from paste.deploy import loadapp
-from paste.script.command import Command
-from paste.script.templates import Template
-from paste.util.template import paste_script_template_renderer
+import zope.deprecation
 
-from pyramid.scripting import get_root
+from paste.deploy import (
+    loadapp,
+    appconfig,
+    )
 
-class PyramidTemplate(Template):
-    def pre(self, command, output_dir, vars): # pragma: no cover
-        vars['random_string'] = os.urandom(20).encode('hex')
-        return Template.pre(self, command, output_dir, vars)
+from pyramid.compat import configparser
+from logging.config import fileConfig
+from pyramid.scripting import prepare
+from pyramid.scaffolds import PyramidTemplate # bw compat
 
-class StarterProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/starter'
-    summary = 'pyramid starter project'
-    template_renderer = staticmethod(paste_script_template_renderer)
+PyramidTemplate = PyramidTemplate # pyflakes
 
-class StarterZCMLProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/starter_zcml'
-    summary = 'pyramid starter project (ZCML)'
-    template_renderer = staticmethod(paste_script_template_renderer)
+zope.deprecation.deprecated(
+    'PyramidTemplate', ('pyramid.paster.PyramidTemplate was moved to '
+                        'pyramid.scaffolds.PyramidTemplate in Pyramid 1.1'),
+)
 
-class ZODBProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/zodb'
-    summary = 'pyramid ZODB starter project'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-class RoutesAlchemyProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/routesalchemy'
-    summary = 'pyramid SQLAlchemy project using url dispatch (no traversal)'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-class AlchemyProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/alchemy'
-    summary = 'pyramid SQLAlchemy project using traversal'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-class PylonsBasicProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/pylons_basic'
-    summary = 'Pylons basic project'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-class PylonsMinimalProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/pylons_minimal'
-    summary = 'Pylons minimal project'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-class PylonsSQLAlchemyProjectTemplate(PyramidTemplate):
-    _template_dir = 'paster_templates/pylons_sqla'
-    summary = 'Pylons SQLAlchemy project'
-    template_renderer = staticmethod(paste_script_template_renderer)
-
-def get_app(config_file, name, loadapp=loadapp):
+def get_app(config_uri, name=None, loadapp=loadapp):
     """ Return the WSGI application named ``name`` in the PasteDeploy
-    config file ``config_file``"""
-    config_name = 'config:%s' % config_file
+    config file specified by ``config_uri``.
+
+    If the ``name`` is None, this will attempt to parse the name from
+    the ``config_uri`` string expecting the format ``inifile#name``.
+    If no name is found, the name will default to "main"."""
+    path, section = _getpathsec(config_uri, name)
+    config_name = 'config:%s' % path
     here_dir = os.getcwd()
-    app = loadapp(config_name, name=name, relative_to=here_dir)
+    app = loadapp(config_name, name=section, relative_to=here_dir)
     return app
 
-_marker = object()
+def get_appsettings(config_uri, name=None, appconfig=appconfig):
+    """ Return a dictionary representing the key/value pairs in an ``app``
+    section within the file represented by ``config_uri``.
 
-class PCommand(Command):
-    get_app = staticmethod(get_app) # hook point
-    get_root = staticmethod(get_root) # hook point
-    group_name = 'pyramid'
-    interact = (interact,) # for testing
-    loadapp = (loadapp,) # for testing
-    verbose = 3
+    If the ``name`` is None, this will attempt to parse the name from
+    the ``config_uri`` string expecting the format ``inifile#name``.
+    If no name is found, the name will default to "main"."""
+    path, section = _getpathsec(config_uri, name)
+    config_name = 'config:%s' % path
+    here_dir = os.getcwd()
+    return appconfig(config_name, name=section, relative_to=here_dir)
 
-    def __init__(self, *arg, **kw):
-        # needs to be in constructor to support Jython (used to be at class
-        # scope as ``usage = '\n' + __doc__``.
-        self.usage = '\n' + self.__doc__
-        Command.__init__(self, *arg, **kw)
-
-class PShellCommand(PCommand):
-    """Open an interactive shell with a :app:`Pyramid` app loaded.
-
-    This command accepts two positional arguments:
-
-    ``config_file`` -- specifies the PasteDeploy config file to use
-    for the interactive shell.  
-
-    ``section_name`` -- specifies the section name in the PasteDeploy
-    config file that represents the application.
-
-    Example::
-
-        $ paster pshell myapp.ini main
-
-    .. note:: You should use a ``section_name`` that refers to the
-              actual ``app`` section in the config file that points at
-              your Pyramid app without any middleware wrapping, or this
-              command will almost certainly fail.
-
+def setup_logging(config_uri, fileConfig=fileConfig,
+                  configparser=configparser):
     """
-    summary = "Open an interactive shell with a pyramid app loaded"
+    Set up logging via the logging module's fileConfig function with the
+    filename specified via ``config_uri`` (a string in the form
+    ``filename#sectionname``).
 
-    min_args = 2
-    max_args = 2
-
-    parser = Command.standard_parser(simulate=True)
-    parser.add_option('-d', '--disable-ipython',
-                      action='store_true',
-                      dest='disable_ipython',
-                      help="Don't use IPython even if it is available")
-
-    def command(self, IPShell=_marker):
-        if IPShell is _marker:
-            try: #pragma no cover
-                from IPython.Shell import IPShell
-            except ImportError: #pragma no cover
-                IPShell = None
-        cprt =('Type "help" for more information. "root" is the Pyramid app '
-               'root object, "registry" is the Pyramid registry object.')
-        banner = "Python %s on %s\n%s" % (sys.version, sys.platform, cprt)
-        config_file, section_name = self.args
-        self.logging_file_config(config_file)
-        app = self.get_app(config_file, section_name, loadapp=self.loadapp[0])
-        root, closer = self.get_root(app)
-        shell_globals = {'root':root, 'registry':app.registry}
-        if IPShell is not None and not self.options.disable_ipython:
-            try:
-                shell = IPShell(argv=[], user_ns=shell_globals)
-                shell.IP.BANNER = shell.IP.BANNER + '\n\n' + banner
-                shell.mainloop()
-            finally:
-                closer()
-        else:
-            try:
-                self.interact[0](banner, local=shell_globals)
-            finally:
-                closer()
-
-BFGShellCommand = PShellCommand # b/w compat forever
-
-class PRoutesCommand(PCommand):
-    """Print all URL dispatch routes used by a Pyramid application in the
-    order in which they are evaluated.  Each route includes the name of the
-    route, the pattern of the route, and the view callable which will be
-    invoked when the route is matched.
-
-    This command accepts two positional arguments:
-
-    ``config_file`` -- specifies the PasteDeploy config file to use
-    for the interactive shell.  
-
-    ``section_name`` -- specifies the section name in the PasteDeploy
-    config file that represents the application.
-
-    Example::
-
-        $ paster proutes myapp.ini main
-
-    .. note:: You should use a ``section_name`` that refers to the
-              actual ``app`` section in the config file that points at
-              your Pyramid app without any middleware wrapping, or this
-              command will almost certainly fail.
+    ConfigParser defaults are specified for the special ``__file__``
+    and ``here`` variables, similar to PasteDeploy config loading.
     """
-    summary = "Print all URL dispatch routes related to a Pyramid application"
-    min_args = 2
-    max_args = 2
-    stdout = sys.stdout
+    path, _ = _getpathsec(config_uri, None)
+    parser = configparser.ConfigParser()
+    parser.read([path])
+    if parser.has_section('loggers'):
+        config_file = os.path.abspath(path)
+        return fileConfig(
+            config_file,
+            dict(__file__=config_file, here=os.path.dirname(config_file))
+            )
 
-    parser = Command.standard_parser(simulate=True)
+def _getpathsec(config_uri, name):
+    if '#' in config_uri:
+        path, section = config_uri.split('#', 1)
+    else:
+        path, section = config_uri, 'main'
+    if name:
+        section = name
+    return path, section
 
-    def _get_mapper(self, app):
-        from pyramid.config import Configurator
-        registry = app.registry
-        config = Configurator(registry = registry)
-        return config.get_routes_mapper()
+def bootstrap(config_uri, request=None):
+    """ Load a WSGI application from the PasteDeploy config file specified
+    by ``config_uri``. The environment will be configured as if it is
+    currently serving ``request``, leaving a natural environment in place
+    to write scripts that can generate URLs and utilize renderers.
 
-    def out(self, msg): # pragma: no cover
-        print msg
-    
-    def command(self):
-        from pyramid.interfaces import IRouteRequest
-        from pyramid.interfaces import IViewClassifier
-        from pyramid.interfaces import IView
-        from zope.interface import Interface
-        config_file, section_name = self.args
-        app = self.get_app(config_file, section_name, loadapp=self.loadapp[0])
-        registry = app.registry
-        mapper = self._get_mapper(app)
-        if mapper is not None:
-            routes = mapper.get_routes()
-            fmt = '%-15s %-30s %-25s'
-            if not routes:
-                return
-            self.out(fmt % ('Name', 'Pattern', 'View'))
-            self.out(
-                fmt % ('-'*len('Name'), '-'*len('Pattern'), '-'*len('View')))
-            for route in routes:
-                request_iface = registry.queryUtility(IRouteRequest,
-                                                      name=route.name)
-                view_callable = None
-                if (request_iface is None) or (route.factory is not None):
-                    self.out(fmt % (route.name, route.pattern, '<unknown>'))
-                else:
-                    view_callable = registry.adapters.lookup(
-                        (IViewClassifier, request_iface, Interface),
-                        IView, name='', default=None)
-                    self.out(fmt % (route.name, route.pattern, view_callable))
+    This function returns a dictionary with ``app``, ``root``, ``closer``,
+    ``request``, and ``registry`` keys.  ``app`` is the WSGI app loaded
+    (based on the ``config_uri``), ``root`` is the traversal root resource
+    of the Pyramid application, and ``closer`` is a parameterless callback
+    that may be called when your script is complete (it pops a threadlocal
+    stack).
+
+    .. note::
+
+       Most operations within :app:`Pyramid` expect to be invoked within the
+       context of a WSGI request, thus it's important when loading your
+       application to anchor it when executing scripts and other code that is
+       not normally invoked during active WSGI requests.
+
+    .. note::
+
+       For a complex config file containing multiple :app:`Pyramid`
+       applications, this function will setup the environment under the context
+       of the last-loaded :app:`Pyramid` application. You may load a specific
+       application yourself by using the lower-level functions
+       :meth:`pyramid.paster.get_app` and :meth:`pyramid.scripting.prepare` in
+       conjunction with :attr:`pyramid.config.global_registries`.
+
+    ``config_uri`` -- specifies the PasteDeploy config file to use for the
+    interactive shell. The format is ``inifile#name``. If the name is left
+    off, ``main`` will be assumed.
+
+    ``request`` -- specified to anchor the script to a given set of WSGI
+    parameters. For example, most people would want to specify the host,
+    scheme and port such that their script will generate URLs in relation
+    to those parameters. A request with default parameters is constructed
+    for you if none is provided. You can mutate the request's ``environ``
+    later to setup a specific host/port/scheme/etc.
+
+    See :ref:`writing_a_script` for more information about how to use this
+    function.
+    """
+    app = get_app(config_uri)
+    env = prepare(request)
+    env['app'] = app
+    return env
+

@@ -117,7 +117,7 @@ Here's how to convert a :mod:`repoze.bfg` application to a
    (if you've been using the example paths, this will be
    ``/tmp/bfgapp/setup.py``) to depend on the ``pyramid`` distribution
    instead the of ``repoze.bfg`` distribution in its
-   ``install_requires`` list.  If you used a ``paster`` template to
+   ``install_requires`` list.  If you used a scaffold to
    create the :mod:`repoze.bfg` application, you can do so by changing
    the ``requires`` line near the top of the ``setup.py`` file.  The
    original may look like this:
@@ -175,6 +175,10 @@ Here's how to convert a :mod:`repoze.bfg` application to a
                 xmlns:bfg="http://namespaces.repoze.org/bfg">
          <bfg:failingtag attr="foo"/>
      </configure>
+
+   You will also need to add the ``pyramid_zcml`` package to your
+   ``setup.py`` ``install_requires`` list.  In Pyramid, ZCML configuration
+   became an optional add-on supported by the ``pyramid_zcml`` package.
 
 #. Retest your application using :app:`Pyramid`.  This might be as
    easy as:

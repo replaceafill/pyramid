@@ -8,11 +8,11 @@ CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
 requires = [
     'pyramid',
-    'repoze.zodbconn',
-    'repoze.tm',
+    'pyramid_zodbconn',
+    'pyramid_tm',
+    'pyramid_debugtoolbar',
     'ZODB3',
-    'WebError',
-    'docutils',
+    'waitress',
     ]
 
 setup(name='tutorial',
@@ -20,9 +20,8 @@ setup(name='tutorial',
       description='tutorial',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
-        "Intended Audience :: Developers",
-        "Framework :: Pylons",
         "Programming Language :: Python",
+        "Framework :: Pylons",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
         ],
@@ -33,12 +32,12 @@ setup(name='tutorial',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
-      install_requires=requires,
-      tests_require=requires,
+      install_requires = requires,
+      tests_require= requires,
       test_suite="tutorial",
       entry_points = """\
       [paste.app_factory]
       main = tutorial:main
       """,
-      paster_plugins=['pyramid'],
       )
+

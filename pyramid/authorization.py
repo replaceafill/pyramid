@@ -1,14 +1,20 @@
-from zope.interface import implements
+from zope.interface import implementer
 
 from pyramid.interfaces import IAuthorizationPolicy
 
 from pyramid.location import lineage
-from pyramid.security import ACLAllowed
-from pyramid.security import ACLDenied
-from pyramid.security import Allow
-from pyramid.security import Deny
-from pyramid.security import Everyone
 
+from pyramid.compat import is_nonstr_iter
+
+from pyramid.security import (
+    ACLAllowed,
+    ACLDenied,
+    Allow,
+    Deny,
+    Everyone,
+    )
+
+@implementer(IAuthorizationPolicy)
 class ACLAuthorizationPolicy(object):
     """ An :term:`authorization policy` which consults an :term:`ACL`
     object attached to a :term:`context` to determine authorization
@@ -55,9 +61,10 @@ class ACLAuthorizationPolicy(object):
       is cleared for all principals encountered in previous ACLs.  The
       walking process ends after we've processed the any ACL directly
       attached to ``context``; a set of principals is returned.
-    """
 
-    implements(IAuthorizationPolicy)
+    Objects of this class implement the
+    :class:`pyramid.interfaces.IAuthorizationPolicy` interface.
+    """
 
     def permits(self, context, principals, permission):
         """ Return an instance of
@@ -76,7 +83,7 @@ class ACLAuthorizationPolicy(object):
             for ace in acl:
                 ace_action, ace_principal, ace_permissions = ace
                 if ace_principal in principals:
-                    if not hasattr(ace_permissions, '__iter__'):
+                    if not is_nonstr_iter(ace_permissions):
                         ace_permissions = [ace_permissions]
                     if permission in ace_permissions:
                         if ace_action == Allow:
@@ -113,20 +120,20 @@ class ACLAuthorizationPolicy(object):
             denied_here = set()
             
             for ace_action, ace_principal, ace_permissions in acl:
-                if not hasattr(ace_permissions, '__iter__'):
+                if not is_nonstr_iter(ace_permissions):
                     ace_permissions = [ace_permissions]
-                if ace_action == Allow and permission in ace_permissions:
+                if (ace_action == Allow) and (permission in ace_permissions):
                     if not ace_principal in denied_here:
                         allowed_here.add(ace_principal)
-                if ace_action == Deny and permission in ace_permissions:
-                    denied_here.add(ace_principal)
-                    if ace_principal == Everyone:
-                        # clear the entire allowed set, as we've hit a
-                        # deny of Everyone ala (Deny, Everyone, ALL)
-                        allowed = set()
-                        break
-                    elif ace_principal in allowed:
-                        allowed.remove(ace_principal)
+                if (ace_action == Deny) and (permission in ace_permissions):
+                        denied_here.add(ace_principal)
+                        if ace_principal == Everyone:
+                            # clear the entire allowed set, as we've hit a
+                            # deny of Everyone ala (Deny, Everyone, ALL)
+                            allowed = set()
+                            break
+                        elif ace_principal in allowed:
+                            allowed.remove(ace_principal)
 
             allowed.update(allowed_here)
 

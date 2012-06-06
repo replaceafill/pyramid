@@ -1,5 +1,4 @@
 import os
-import sys
 
 from setuptools import setup, find_packages
 
@@ -11,14 +10,12 @@ requires = [
     'pyramid',
     'SQLAlchemy',
     'transaction',
-    'repoze.tm2',
+    'pyramid_tm',
+    'pyramid_debugtoolbar',
     'zope.sqlalchemy',
-    'WebError',
+    'waitress',
     'docutils',
     ]
-
-if sys.version_info[:3] < (2,5,0):
-    requires.append('pysqlite')
 
 setup(name='tutorial',
       version='0.0',
@@ -42,7 +39,8 @@ setup(name='tutorial',
       entry_points = """\
       [paste.app_factory]
       main = tutorial:main
+      [console_scripts]
+      initialize_tutorial_db = tutorial.scripts.initializedb:main
       """,
-      paster_plugins=['pyramid'],
       )
 

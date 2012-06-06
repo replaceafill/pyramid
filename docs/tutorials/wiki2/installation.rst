@@ -2,10 +2,9 @@
 Installation
 ============
 
-For the most part, the installation process for this tutorial
-duplicates the steps described in :ref:`installing_chapter` and
-:ref:`project_narr`, however it also explains how to install
-additional libraries for tutorial purposes.
+This tutorial assumes that Python and virtualenv are already installed
+and working in your system. If you need help setting this up, you should
+refer to the chapters on :ref:`installing_chapter`.
 
 Preparation
 ===========
@@ -22,26 +21,7 @@ Preparation, UNIX
    manager.  For example, on a Debian Linux system, do ``sudo apt-get
    install libsqlite3-dev``.
 
-#. If you don't already have a Python 2.6 interpreter installed on
-   your system, obtain, install, or find `Python 2.6
-   <http://www.python.org/download/releases/2.6.6/>`_ for your system.
-
-#. Install the latest `setuptools` into the Python you
-   obtained/installed/found in the step above: download `ez_setup.py
-   <http://peak.telecommunity.com/dist/ez_setup.py>`_ and run it using
-   the ``python`` interpreter of your Python 2.6 installation:
-
-   .. code-block:: text
-
-      $ /path/to/my/Python-2.6/bin/python ez_setup.py
-
-#. Use that Python's `bin/easy_install` to install `virtualenv`:
-
-   .. code-block:: text
-
-      $ /path/to/my/Python-2.6/bin/easy_install virtualenv
-
-#. Use that Python's virtualenv to make a workspace:
+#. Use your Python's virtualenv to make a workspace:
 
    .. code-block:: text
 
@@ -53,9 +33,6 @@ Preparation, UNIX
 
       $ cd pyramidtut
 
-#. (Optional) Consider using ``source bin/activate`` to make your
-   shell environment wired to use the virtualenv.
-
 #. Use ``easy_install`` to get :app:`Pyramid` and its direct
    dependencies installed:
 
@@ -63,36 +40,10 @@ Preparation, UNIX
 
       $ bin/easy_install pyramid
 
-#. Use ``easy_install`` to install various packages from PyPI.
-
-   .. code-block:: text
-
-      $ bin/easy_install docutils nose coverage zope.sqlalchemy \
-                SQLAlchemy repoze.tm2
-
 Preparation, Windows
 --------------------
 
-#. Install, or find `Python 2.6.6
-   <http://python.org/download/releases/2.6.6/>`_ for your system.
-
-#. Install the latest `setuptools` into the Python you
-   obtained/installed/found in the step above: download `ez_setup.py
-   <http://peak.telecommunity.com/dist/ez_setup.py>`_ and run it using
-   the ``python`` interpreter of your Python 2.6 installation using a
-   command prompt:
-
-   .. code-block:: text
-
-      c:\> c:\Python26\python ez_setup.py
-
-#. Use that Python's `bin/easy_install` to install `virtualenv`:
-
-   .. code-block:: text
-
-      c:\> c:\Python26\Scripts\easy_install virtualenv
-
-#. Use that Python's virtualenv to make a workspace:
+#. Use your Python's virtualenv to make a workspace:
 
    .. code-block:: text
 
@@ -104,9 +55,6 @@ Preparation, Windows
 
       c:\> cd pyramidtut
 
-#. (Optional) Consider using ``bin\activate.bat`` to make your shell
-   environment wired to use the virtualenv.
-
 #. Use ``easy_install`` to get :app:`Pyramid` and its direct
    dependencies installed:
 
@@ -114,23 +62,15 @@ Preparation, Windows
 
       c:\pyramidtut> Scripts\easy_install pyramid
 
-#. Use ``easy_install`` to install various packages from PyPI.
-
-   .. code-block:: text
-
-      c:\pyramidtut> Scripts\easy_install -i docutils \
-               nose coverage zope.sqlalchemy SQLAlchemy repoze.tm2
-
-
 .. _sql_making_a_project:
 
 Making a Project
 ================
 
-Your next step is to create a project.  :app:`Pyramid` supplies a
-variety of templates to generate sample projects.  We will use the
-``pyramid_routesalchemy`` template, which generates an application
-that uses :term:`SQLAlchemy` and :term:`URL dispatch`.
+Your next step is to create a project.  For this tutorial, we will use the
+:term:`scaffold` named ``alchemy``, which generates an application
+that uses :term:`SQLAlchemy` and :term:`URL dispatch`.  :app:`Pyramid`
+supplies a variety of scaffolds to generate sample projects.
 
 The below instructions assume your current working directory is the
 "virtualenv" named "pyramidtut".
@@ -139,16 +79,16 @@ On UNIX:
 
 .. code-block:: text
 
-   $ bin/paster create -t pyramid_routesalchemy tutorial
+   $ bin/pcreate -s alchemy tutorial
 
 On Windows:
 
 .. code-block:: text
 
-   c:\pyramidtut> Scripts\paster create -t pyramid_routesalchemy tutorial
+   c:\pyramidtut> Scripts\pcreate -s alchemy tutorial
 
-.. note:: If you are using Windows, the ``pyramid_routesalchemy``
-   Paster template may not deal gracefully with installation into a
+.. note:: If you are using Windows, the ``alchemy``
+   scaffold may not deal gracefully with installation into a
    location that contains spaces in the path.  If you experience
    startup problems, try putting both the virtualenv and the project
    into directories that do not contain spaces in their paths.
@@ -176,6 +116,11 @@ On Windows:
    c:\pyramidtut> cd tutorial
    c:\pyramidtut\tutorial> ..\Scripts\python setup.py develop
 
+Success executing this command will end with a line to the console something
+like::
+
+   Finished processing dependencies for tutorial==0.0
+
 .. _sql_running_tests:
 
 Running the Tests
@@ -196,22 +141,13 @@ On Windows:
 
    c:\pyramidtut\tutorial> ..\Scripts\python setup.py test -q
 
-Starting the Application
-========================
+For a successful test run, you should see output that ends like this::
 
-Start the application.
-
-On UNIX:
-
-.. code-block:: text
-
-   $ ../bin/paster serve development.ini --reload
-
-On Windows:
-
-.. code-block:: text
-
-   c:\pyramidtut\tutorial> ..\Scripts\paster serve development.ini --reload
+  .
+  ----------------------------------------------------------------------
+  Ran 1 test in 0.094s
+ 
+  OK
 
 Exposing Test Coverage Information
 ==================================
@@ -250,30 +186,122 @@ On Windows:
 
 .. code-block:: text
 
-   c:\pyramidtut\tutorial> ..\Scripts\nosetests --cover-package=tutorial \
+   c:\pyramidtut\tutorial> ..\Scripts\nosetests --cover-package=tutorial ^
          --cover-erase --with-coverage
 
-Looks like our package's ``models`` module doesn't quite have 100%
-test coverage.
+If successful, you will see output something like this::
 
-Visit the Application in a Browser
-==================================
+  .
+  Name               Stmts   Miss  Cover   Missing
+  ------------------------------------------------
+  tutorial              11      7    36%   9-15
+  tutorial.models       17      0   100%   
+  tutorial.scripts       0      0   100%   
+  tutorial.tests        24      0   100%   
+  tutorial.views         6      0   100%   
+  ------------------------------------------------
+  TOTAL                 58      7    88%   
+  ----------------------------------------------------------------------
+  Ran 1 test in 0.459s
 
-In a browser, visit ``http://localhost:6543/``.  You will see the
-generated application's default page.
+  OK
 
-Decisions the ``pyramid_routesalchemy`` Template Has Made For You
+Looks like our package doesn't quite have 100% test coverage.
+
+Initializing the Database
+=========================
+
+We need to use the ``initialize_tutorial_db`` :term:`console
+script` to initialize our database.
+
+Type the following command, make sure you are still in the ``tutorial``
+directory (the directory with a ``development.ini`` in it):
+
+On UNIX:
+
+.. code-block:: text
+
+   $ ../bin/initialize_tutorial_db development.ini
+
+On Windows:
+
+.. code-block:: text
+
+   c:\pyramidtut\tutorial> ..\Scripts\initialize_tutorial_db development.ini
+
+The output to your console should be something like this::
+
+  2011-11-26 14:42:25,012 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                PRAGMA table_info("models")
+  2011-11-26 14:42:25,013 INFO  [sqlalchemy.engine.base.Engine][MainThread] ()
+  2011-11-26 14:42:25,013 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+  CREATE TABLE models (
+  	id INTEGER NOT NULL, 
+  	name VARCHAR(255), 
+  	value INTEGER, 
+  	PRIMARY KEY (id), 
+  	UNIQUE (name)
+  )
+  2011-11-26 14:42:25,013 INFO  [sqlalchemy.engine.base.Engine][MainThread] ()
+  2011-11-26 14:42:25,135 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                COMMIT
+  2011-11-26 14:42:25,137 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                BEGIN (implicit)
+  2011-11-26 14:42:25,138 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                INSERT INTO models (name, value) VALUES (?, ?)
+  2011-11-26 14:42:25,139 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                (u'one', 1)
+  2011-11-26 14:42:25,140 INFO  [sqlalchemy.engine.base.Engine][MainThread] 
+                                COMMIT
+
+Success!  You should now have a ``tutorial.sqlite`` file in your current working
+directory.  This will be a SQLite database with a single table defined in it
+(``models``).
+
+.. _wiki2-start-the-application:
+
+Starting the Application
+========================
+
+Start the application.
+
+On UNIX:
+
+.. code-block:: text
+
+   $ ../bin/pserve development.ini --reload
+
+On Windows:
+
+.. code-block:: text
+
+   c:\pyramidtut\tutorial> ..\Scripts\pserve development.ini --reload
+
+If successful, you will see something like this on your console::
+
+  Starting subprocess with file monitor
+  Starting server in PID 8966.
+  Starting HTTP server on http://0.0.0.0:6543
+
+This means the server is ready to accept requests.
+
+At this point, when you visit ``http://localhost:6543/`` in your web browser,
+you will see the generated application's default page.
+
+One thing you'll notice is the "debug toolbar" icon on right hand side of the
+page.  You can read more about the purpose of the icon at
+:ref:`debug_toolbar`.  It allows you to get information about your
+application while you develop.
+
+Decisions the ``alchemy`` Scaffold Has Made For You
 =================================================================
 
-Creating a project using the ``pyramid_routesalchemy`` template makes
+Creating a project using the ``alchemy`` scaffold makes
 the following assumptions:
 
 - you are willing to use :term:`SQLAlchemy` as a database access tool
 
 - you are willing to use :term:`url dispatch` to map URLs to code.
-
-- you want to configure your application *imperatively* (no
-  :term:`declarative configuration` such as ZCML).
 
 .. note::
 

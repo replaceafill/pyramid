@@ -4,17 +4,20 @@
 Much Ado About Traversal
 ========================
 
-.. note:: This chapter was adapted, with permission, from a blog post by `Rob
+(Or, why you should care about it)
+
+.. note::
+
+   This chapter was adapted, with permission, from a blog post by `Rob
    Miller <http://blog.nonsequitarian.org/>`_, originally published at
-   `http://blog.nonsequitarian.org/2010/much-ado-about-traversal/
-   <http://blog.nonsequitarian.org/2010/much-ado-about-traversal/>`_.
+   http://blog.nonsequitarian.org/2010/much-ado-about-traversal/ .
 
 Traversal is an alternative to :term:`URL dispatch` which allows
 :app:`Pyramid` applications to map URLs to code.
 
 .. note::
    
-   Ex-Zope users whom are already familiar with traversal and view lookup
+   Ex-Zope users who are already familiar with traversal and view lookup
    conceptually may want to skip directly to the :ref:`traversal_chapter`
    chapter, which discusses technical details.  This chapter is mostly aimed
    at people who have previous :term:`Pylons` experience or experience in
@@ -39,6 +42,9 @@ use cases yourself, understanding these new ideas is worth the effort for any
 web developer so you know when you might want to use them.  :term:`Traversal`
 is actually a straightforward metaphor easily comprehended by anyone who's
 ever used a run-of-the-mill file system with folders and files.
+
+.. index::
+   single: URL dispatch
 
 URL Dispatch
 ------------
@@ -101,14 +107,14 @@ from this process to the client as the final result.  The server
 configuration specified which files would trigger some dynamic code, with the
 default case being to just serve the static file.
 
+.. index::
+   single: traversal
+
 Traversal (aka Resource Location)
 ---------------------------------
 
-.. index::
-   single: traversal overview
-
 Believe it or not, if you understand how serving files from a file system
-works,you understand traversal.  And if you understand that a server might do
+works, you understand traversal.  And if you understand that a server might do
 something different based on what type of file a given request specifies,
 then you understand view lookup.
 
@@ -141,6 +147,9 @@ file that was retrieved in the file system example.  If a :exc:`KeyError` is
 generated anywhere along the way, :app:`Pyramid` will return 404.  (This
 isn't precisely true, as you'll see when we learn about view lookup below,
 but the basic idea holds.)
+
+.. index::
+   single: resource
 
 What Is a "Resource"?
 ---------------------
@@ -194,6 +203,9 @@ system.  Traversal is in fact a superset of file system lookup.
 
 .. note:: See the chapter entitled :ref:`resources_chapter` for a more
    technical overview of resources.
+
+.. index::
+   single: view lookup
 
 View Lookup
 -----------
@@ -269,14 +281,14 @@ It might be possible, but it certainly won't be easy.  The matching
 patterns are going to become complex quickly as you try to handle all
 of the edge cases.
 
-With traversal, however, it's straightforward.  20 layers of nesting would be
-no problem.  :app:`Pyramid` will happily call ``__getitem__`` as many times
-as it needs to, until it runs out of path segments or until a resource raises
-a :exc:`KeyError`.  Each resource only needs to know how to fetch its
-immediate children, the traversal algorithm takes care of the rest.  Also,
-since the structure of the resource tree can live in the database and not in
-the code, it's simple to let users modify the tree at runtime to set up their
-own personalized "directory" structures.
+With traversal, however, it's straightforward.  Twenty layers of nesting
+would be no problem.  :app:`Pyramid` will happily call ``__getitem__`` as
+many times as it needs to, until it runs out of path segments or until a
+resource raises a :exc:`KeyError`.  Each resource only needs to know how to
+fetch its immediate children, the traversal algorithm takes care of the rest.
+Also, since the structure of the resource tree can live in the database and
+not in the code, it's simple to let users modify the tree at runtime to set
+up their own personalized "directory" structures.
 
 Another use case in which traversal shines is when there is a need to support
 a context-dependent security policy.  One example might be a document
@@ -306,6 +318,7 @@ using :app:`Pyramid` and you ever find that you *do* need to support one of
 these use cases, you'll be glad you have traversal in your toolkit.
 
 .. note::
+
    It is even possible to mix and match :term:`traversal` with
    :term:`URL dispatch` in the same :app:`Pyramid` application. See the
    :ref:`hybrid_chapter` chapter for details.

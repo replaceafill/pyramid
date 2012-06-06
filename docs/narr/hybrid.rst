@@ -33,7 +33,7 @@ URL Dispatch Only
 ~~~~~~~~~~~~~~~~~
 
 An application that uses :term:`url dispatch` exclusively to map URLs to code
-will often have statements like this within your application startup
+will often have statements like this within application startup
 configuration:
 
 .. code-block:: python
@@ -41,15 +41,20 @@ configuration:
 
    # config is an instance of pyramid.config.Configurator
 
-   config.add_route('foobar', '{foo}/{bar}', view='myproject.views.foobar')
-   config.add_route('bazbuz', '{baz}/{buz}', view='myproject.views.bazbuz')
+   config.add_route('foobar', '{foo}/{bar}')
+   config.add_route('bazbuz', '{baz}/{buz}')
 
-Each :term:`route` typically corresponds to a single view callable,
-and when that route is matched during a request, the view callable
-named by the ``view`` attribute is invoked.
+   config.add_view('myproject.views.foobar', route_name='foobar')
+   config.add_view('myproject.views.bazbuz', route_name='bazbuz')
 
-Typically, an application that uses only URL dispatch won't perform any calls
-to :meth:`pyramid.config.Configurator.add_view` in its startup code.
+Each :term:`route` corresponds to one or more view callables.  Each view
+callable is associated with a route by passing a ``route_name`` parameter
+that matches its name during a call to
+:meth:`~pyramid.config.Configurator.add_view`.  When a route is matched
+during a request, :term:`view lookup` is used to match the request to its
+associated view callable.  The presence of calls to
+:meth:`~pyramid.config.Configurator.add_route` signify that an application is
+using URL dispatch.
 
 Traversal Only
 ~~~~~~~~~~~~~~
@@ -73,6 +78,9 @@ be called when the URL ``/bazbuz`` is visited.
 Typically, an application that uses traversal exclusively won't perform any
 calls to :meth:`pyramid.config.Configurator.add_route` in its startup
 code.
+
+.. index::
+   single: hybrid applications
 
 Hybrid Applications
 -------------------
@@ -156,12 +164,12 @@ match is straightforward.  When a route is matched:
 - If the route's configuration does not have a ``factory``
   argument, the *global* :term:`root factory` will be called to
   generate a :term:`root` object.  The global root factory is the
-  callable implied by the ``root_factory`` argument passed to
-  :class:`pyramid.config.Configurator` at application
+  callable implied by the ``root_factory`` argument passed to the
+  :class:`~pyramid.config.Configurator` at application
   startup time.
 
 - If a ``root_factory`` argument is not provided to the
-  :class:`pyramid.config.Configurator` at startup time, a
+  :class:`~pyramid.config.Configurator` at startup time, a
   *default* root factory is used.  The default root factory is used to
   generate a root object.
 
@@ -170,7 +178,10 @@ match is straightforward.  When a route is matched:
    Root factories related to a route were explained previously within
    :ref:`route_factories`.  Both the global root factory and default
    root factory were explained previously within
-   :ref:`the_resource_tree`.  
+   :ref:`the_resource_tree`.
+
+.. index::
+   pair: hybrid applications; *traverse route pattern
 
 .. _using_traverse_in_a_route_pattern:
 
@@ -196,12 +207,9 @@ remainder becomes the path used to perform traversal.
    The ``*remainder`` route pattern syntax is explained in more
    detail within :ref:`route_pattern_syntax`.
 
-Note that unlike the examples provided within :ref:`urldispatch_chapter`, the
-``add_route`` configuration statement named previously does not pass a
-``view`` argument.  This is because a hybrid mode application relies on
-:term:`traversal` to do :term:`resource location` and :term:`view lookup`
-instead of invariably invoking a specific view callable named directly within
-the matched route's configuration.
+A hybrid mode application relies more heavily on :term:`traversal` to do
+:term:`resource location` and :term:`view lookup` than most examples indicate
+within :ref:`urldispatch_chapter`.
 
 Because the pattern of the above route ends with ``*traverse``, when this
 route configuration is matched during a request, :app:`Pyramid` will attempt
@@ -214,7 +222,7 @@ root factory.  Once :term:`traversal` has found a :term:`context` resource,
 have been invoked in a "pure" traversal-based application.
 
 Let's assume there is no *global* :term:`root factory` configured in
-this application. The *default* :term:`root factory` cannot be traversed: 
+this application. The *default* :term:`root factory` cannot be traversed:
 it has no useful ``__getitem__`` method.  So we'll need to associate
 this route configuration with a custom root factory in order to
 create a useful hybrid application.  To that end, let's imagine that
@@ -231,8 +239,8 @@ we've created a root factory that looks like so in a module named
        def __getitem__(self, name):
           return self.subobjects[name]
 
-   root = Traversable(
-           {'a':Resource({'b':Resource({'c':Resource({})})})}
+   root = Resource(
+           {'a': Resource({'b': Resource({'c': Resource({})})})}
           )
 
    def root_factory(request):
@@ -245,22 +253,22 @@ configuration statement:
 .. code-block:: python
    :linenos:
 
-   config.add_route('home', '{foo}/{bar}/*traverse', 
+   config.add_route('home', '{foo}/{bar}/*traverse',
                     factory='mypackage.routes.root_factory')
 
 The ``factory`` above points at the function we've defined.  It will return
-an instance of the ``Traversable`` class as a root object whenever this route
-is matched.  Instances of the``Resource`` class can be used for tree
-traversal because they have a ``__getitem__`` method that does something
-nominally useful. Since traversal uses ``__getitem__`` to walk the resources
-of a resource tree, using traversal against the root resource implied by our
-route statement is a reasonable thing to do.
+an instance of the ``Resource`` class as a root object whenever this route is
+matched.  Instances of the ``Resource`` class can be used for tree traversal
+because they have a ``__getitem__`` method that does something nominally
+useful. Since traversal uses ``__getitem__`` to walk the resources of a
+resource tree, using traversal against the root resource implied by our route
+statement is a reasonable thing to do.
 
 .. note::
 
-  We could have also used our ``root_factory`` callable as the
+  We could have also used our ``root_factory`` function as the
   ``root_factory`` argument of the
-  :class:`pyramid.config.Configurator` constructor, instead
+  :class:`~pyramid.config.Configurator` constructor, instead
   of associating it with a particular route inside the route's
   configuration.  Every hybrid route configuration that is matched but
   which does *not* name a ``factory`` attribute will use the use
@@ -277,12 +285,12 @@ instance named ``root`` in ``routes.py``.
 If the URL that matched a route with the pattern ``{foo}/{bar}/*traverse``,
 is ``http://example.com/one/two/a/b/c``, the traversal path used
 against the root object will be ``a/b/c``.  As a result,
-:app:`Pyramid` will attempt to traverse through the edges ``a``,
-``b``, and ``c``, beginning at the root object.
+:app:`Pyramid` will attempt to traverse through the edges ``'a'``,
+``'b'``, and ``'c'``, beginning at the root object.
 
 In our above example, this particular set of traversal steps will mean that
-the :term:`context` resource of the view would be the ``Traversable`` object
-we've named ``c`` in our bogus resource tree and the :term:`view name`
+the :term:`context` resource of the view would be the ``Resource`` object
+we've named ``'c'`` in our bogus resource tree and the :term:`view name`
 resulting from traversal will be the empty string; if you need a refresher
 about why this outcome is presumed, see :ref:`traversal_algorithm`.
 
@@ -295,18 +303,18 @@ invoked after a route matches:
 .. code-block:: python
    :linenos:
 
-   config.add_route('home', '{foo}/{bar}/*traverse', 
+   config.add_route('home', '{foo}/{bar}/*traverse',
                     factory='mypackage.routes.root_factory')
    config.add_view('mypackage.views.myview', route_name='home')
 
 Note that the above call to
-:meth:`pyramid.config.Configurator.add_view` includes a ``route_name``
+:meth:`~pyramid.config.Configurator.add_view` includes a ``route_name``
 argument.  View configurations that include a ``route_name`` argument are
 meant to associate a particular view declaration with a route, using the
 route's name, in order to indicate that the view should *only be invoked when
 the route matches*.
 
-Calls to :meth:`pyramid.config.Configurator.add_view` may pass a
+Calls to :meth:`~pyramid.config.Configurator.add_view` may pass a
 ``route_name`` attribute, which refers to the value of an existing route's
 ``name`` argument.  In the above example, the route name is ``home``,
 referring to the name of the route defined above it.
@@ -325,11 +333,11 @@ when a hybrid route is matched:
 .. code-block:: python
    :linenos:
 
-   config.add_route('home', '{foo}/{bar}/*traverse', 
+   config.add_route('home', '{foo}/{bar}/*traverse',
                     factory='mypackage.routes.root_factory')
-   config.add_view('mypackage.views.myview', name='home')
-   config.add_view('mypackage.views.another_view', name='another', 
-                   route_name='home')
+   config.add_view('mypackage.views.myview', route_name='home')
+   config.add_view('mypackage.views.another_view', route_name='home',
+                   name='another')
 
 The ``add_view`` call for ``mypackage.views.another_view`` above names a
 different view and, more importantly, a different :term:`view name`.  The
@@ -357,7 +365,7 @@ Using the ``traverse`` Argument In a Route Definition
 
 Rather than using the ``*traverse`` remainder marker in a pattern, you
 can use the ``traverse`` argument to the
-:meth:`pyramid.config.Configurator.add_route` method.
+:meth:`~pyramid.config.Configurator.add_route` method.
 
 When you use the ``*traverse`` remainder marker, the traversal path is
 limited to being the remainder segments of a request URL when a route
@@ -365,18 +373,18 @@ matches.  However, when you use the ``traverse`` argument or
 attribute, you have more control over how to compose a traversal path.
 
 Here's a use of the ``traverse`` pattern in a call to
-:meth:`pyramid.config.Configurator.add_route`:
+:meth:`~pyramid.config.Configurator.add_route`:
 
 .. code-block:: python
    :linenos:
 
    config.add_route('abc', '/articles/{article}/edit',
-                    traverse='/articles/{article}')
+                    traverse='/{article}')
 
 The syntax of the ``traverse`` argument is the same as it is for
 ``pattern``.
 
-If, as above, the ``pattern`` provided is ``articles/{article}/edit``,
+If, as above, the ``pattern`` provided is ``/articles/{article}/edit``,
 and the ``traverse`` argument provided is ``/{article}``, when a
 request comes in that causes the route to match in such a way that the
 ``article`` match value is ``1`` (when the request URI is
@@ -398,6 +406,9 @@ Traversal will begin at the root object implied by this route (either
 the global root, or the object returned by the ``factory`` associated
 with this route).
 
+.. index::
+   pair: hybrid applications; global views
+
 Making Global Views Match
 +++++++++++++++++++++++++
 
@@ -418,6 +429,7 @@ attribute.
    config.add_view('myproject.views.bazbuz', name='bazbuz')
 
 .. index::
+   pair: hybrid applications; *subpath
    single: route subpath
    single: subpath (route)
 
@@ -426,13 +438,12 @@ attribute.
 Using ``*subpath`` in a Route Pattern
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are certain extremely rare cases when you'd like to influence
-the traversal :term:`subpath` when a route matches without actually
-performing traversal.  For instance, the
-:func:`pyramid.wsgi.wsgiapp2` decorator and the
-:class:`pyramid.view.static` helper attempt to compute
-``PATH_INFO`` from the request's subpath, so it's useful to be able to
-influence this value.
+There are certain extremely rare cases when you'd like to influence the
+traversal :term:`subpath` when a route matches without actually performing
+traversal.  For instance, the :func:`pyramid.wsgi.wsgiapp2` decorator and the
+:class:`pyramid.static.static_view` helper attempt to compute ``PATH_INFO``
+from the request's subpath when its ``use_subpath`` argument is ``True``, so
+it's useful to be able to influence this value.
 
 When ``*subpath`` exists in a pattern, no path is actually traversed,
 but the traversal algorithm will return a :term:`subpath` list implied
@@ -442,12 +453,19 @@ commonly in route declarations that look like this:
 .. code-block:: python
    :linenos:
 
-   config.add_route('static', '/static/*subpath',
-                    view='mypackage.views.static_view')
+   from pryamid.static import static_view
 
-Where ``mypackage.views.static_view`` is an instance of
-:class:`pyramid.view.static`.  This effectively tells the static helper to
-traverse everything in the subpath as a filename.
+   www = static_view('mypackage:static', use_subpath=True)
+
+   config.add_route('static', '/static/*subpath')
+   config.add_view(www, route_name='static')
+
+``mypackage.views.www`` is an instance of
+:class:`pyramid.static.static_view`.  This effectively tells the static
+helper to traverse everything in the subpath as a filename.
+
+.. index::
+   pair: hybrid applications; corner cases
 
 Corner Cases
 ------------
@@ -458,11 +476,16 @@ application.  We'll detail them here.
 Registering a Default View for a Route That Has a ``view`` Attribute
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. warning:: As of :app:`Pyramid` 1.1 this section is slated to be removed in
+   a later documentation release because the the ability to add views
+   directly to the :term:`route configuration` by passing a ``view`` argument
+   to ``add_route`` has been deprecated.
+
 It is an error to provide *both* a ``view`` argument to a :term:`route
 configuration` *and* a :term:`view configuration` which names a
 ``route_name`` that has no ``name`` value or the empty ``name`` value.  For
-example, this pair of declarations will generate a "conflict" error at
-startup time.
+example, this pair of declarations will generate a conflict error at startup
+time.
 
 .. code-block:: python
    :linenos:
@@ -472,7 +495,7 @@ startup time.
    config.add_view('myproject.views.another', route_name='home')
 
 This is because the ``view`` argument to the
-:meth:`pyramid.config.Configurator.add_route` above is an *implicit*
+:meth:`~pyramid.config.Configurator.add_route` above is an *implicit*
 default view when that route matches.  ``add_route`` calls don't *need* to
 supply a view attribute.  For example, this ``add_route`` call:
 
@@ -490,8 +513,8 @@ Can also be spelled like so:
    config.add_route('home', '{foo}/{bar}/*traverse')
    config.add_view('myproject.views.home', route_name='home')
 
-The two spellings are logically equivalent.  In fact, the former is
-just a syntactical shortcut for the latter.
+The two spellings are logically equivalent.  In fact, the former is just a
+syntactical shortcut for the latter.
 
 Binding Extra Views Against a Route Configuration that Doesn't Have a ``*traverse`` Element In Its Pattern
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

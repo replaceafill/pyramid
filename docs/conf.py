@@ -11,7 +11,8 @@
 # All configuration values have a default value; values that are commented out
 # serve to show the default value.
 
-import sys, os
+import sys
+import os
 import datetime
 import inspect
 import warnings
@@ -38,27 +39,30 @@ LaTeXTranslator.depart_inline = nothing
 
 book = os.environ.get('BOOK')
 
-# If your extensions are in another directory, add it here. If the directory
-# is relative to the documentation root, use os.path.abspath to make it
-# absolute, like shown here.
-parent = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(os.path.abspath(parent))
-wd = os.getcwd()
-os.chdir(parent)
-os.system('%s setup.py test -q' % sys.executable)
-os.chdir(wd)
-
-for item in os.listdir(parent):
-    if item.endswith('.egg'):
-        sys.path.append(os.path.join(parent, item))
-
 # General configuration
 # ---------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
-              'repoze.sphinx.autointerface']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'repoze.sphinx.autointerface',
+    'sphinx.ext.viewcode',
+#    'sphinx.ext.intersphinx'
+    ]
+
+# Looks for objects in other Pyramid projects
+## intersphinx_mapping = {
+##     'cookbook':
+##     ('http://docs.pylonsproject.org/projects/pyramid_cookbook/dev/', None),
+##     'handlers':
+##     ('http://docs.pylonsproject.org/projects/pyramid_handlers/dev/', None),
+##     'zcml':
+##     ('http://docs.pylonsproject.org/projects/pyramid_zcml/dev/', None),
+##     'jinja2':
+##     ('http://docs.pylonsproject.org/projects/pyramid_jinja2/dev/', None),
+##     }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -77,7 +81,8 @@ copyright = '%s, Agendaless Consulting' % datetime.datetime.now().year
 # other places throughout the built documents.
 #
 # The short X.Y version.
-version = '1.0a9'
+version = '1.4dev'
+
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -89,6 +94,10 @@ today_fmt = '%B %d, %Y'
 
 # List of documents that shouldn't be included in the build.
 #unused_docs = []
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ['_themes/README.rst',]
 
 # List of directories, relative to source directories, that shouldn't be searched
 # for source files.
@@ -120,10 +129,39 @@ if book:
 # -----------------------
 
 # Add and use Pylons theme
-sys.path.append(os.path.abspath('_themes'))
+if 'sphinx-build' in ' '.join(sys.argv): # protect against dumb importers
+    from subprocess import call, Popen, PIPE
+
+    p = Popen('which git', shell=True, stdout=PIPE)
+
+    cwd = os.getcwd()
+    _themes = os.path.join(cwd, '_themes')
+    p = Popen('which git', shell=True, stdout=PIPE)
+    git = p.stdout.read().strip()
+    if not os.listdir(_themes):
+        call([git, 'submodule', '--init'])
+    else:
+        call([git, 'submodule', 'update'])
+
+    sys.path.append(os.path.abspath('_themes'))
+
+    parent = os.path.dirname(os.path.dirname(__file__))
+    sys.path.append(os.path.abspath(parent))
+    wd = os.getcwd()
+    os.chdir(parent)
+    os.system('%s setup.py test -q' % sys.executable)
+    os.chdir(wd)
+
+    for item in os.listdir(parent):
+        if item.endswith('.egg'):
+            sys.path.append(os.path.join(parent, item))
+
 html_theme_path = ['_themes']
 html_theme = 'pyramid'
-
+html_theme_options = dict(
+    github_url='https://github.com/Pylons/pyramid',
+    in_progress='true',
+    )
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
 # given in html_static_path.
@@ -365,7 +403,7 @@ def frontmatter(name, arguments, options, content, lineno,
 % reset page counter
 \setcounter{page}{1}
 % suppress first toc pagenum
-\addtocontents{toc}{\protect\thispagestyle{empty}} 
+\addtocontents{toc}{\protect\thispagestyle{empty}}
 """,
         format='latex')]
 
@@ -378,7 +416,7 @@ def mainmatter(name, arguments, options, content, lineno,
 % allow part/chapter/section numbering
 \setcounter{secnumdepth}{2}
 % get headers back
-\pagestyle{fancy} 
+\pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0.5pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -436,7 +474,7 @@ def resig(app, what, name, obj, options, signature, return_annotation):
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = 'The Pyramid Web Application Development Framework, Version 1.0'
+epub_title = 'The Pyramid Web Application Development Framework, Version 1.4'
 epub_author = 'Chris McDonough'
 epub_publisher = 'Agendaless Consulting'
 epub_copyright = '2008-2011'
@@ -450,10 +488,10 @@ epub_scheme = 'ISBN'
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
-epub_identifier = '0615345379'
+epub_identifier = '0615445675'
 
 # A unique identification for the text.
-epub_uid = 'The Pyramid Web Application Development Framework, Version 1.0'
+epub_uid = 'The Pyramid Web Application Development Framework, Version 1.4'
 
 # HTML files that should be inserted before the pages created by sphinx.
 # The format is a list of tuples containing the path and title.
@@ -464,7 +502,10 @@ epub_uid = 'The Pyramid Web Application Development Framework, Version 1.0'
 #epub_post_files = []
 
 # A list of files that should not be packed into the epub file.
-#epub_exclude_files = []
+epub_exclude_files = ['_static/opensearch.xml', '_static/doctools.js',
+    '_static/jquery.js', '_static/searchtools.js', '_static/underscore.js',
+    '_static/basic.css', 'search.html']
+
 
 # The depth of the table of contents in toc.ncx.
 epub_tocdepth = 3

@@ -9,10 +9,24 @@ development framework.  It is developed as part of the `Pylons Project
 <http://docs.pylonsproject.org/>`_.  It is licensed under a `BSD-like license
 <http://repoze.org/license.html>`_.
 
-.. note::
+Here is one of the simplest :app:`Pyramid` applications you can make:
 
-   Pyramid is the latest iteration of the web framework previously known as
-   :mod:`repoze.bfg`.
+.. literalinclude:: narr/helloworld.py
+
+When saved to ``helloworld.py``, the above application can be run via:
+
+.. code-block:: text
+
+   $ easy_install pyramid
+   $ python helloworld.py
+
+When you visit ``http://localhost:8080/hello/world`` in a browser, you will
+see the text ``Hello, world!``.
+
+See :ref:`firstapp_chapter` for a full explanation of how this application
+works. Read the :ref:`html_narrative_documentation` to understand how
+:app:`Pyramid` is designed to scale from simple applications like this to
+very large web applications.
 
 Front Matter
 ============
@@ -22,6 +36,19 @@ Front Matter
 
    copyright.rst
    conventions.rst
+
+What's New
+==========
+
+.. toctree::
+   :maxdepth: 1
+
+   whatsnew-1.3
+   whatsnew-1.2
+   whatsnew-1.1
+   whatsnew-1.0
+
+.. _html_narrative_documentation:
 
 Narrative documentation
 =======================
@@ -34,77 +61,77 @@ Narrative documentation in chapter form explaining how to use
 
    narr/introduction
    narr/install
-   narr/configuration
    narr/firstapp
+   narr/configuration
    narr/project
    narr/startup
+   narr/router
    narr/urldispatch
-   narr/muchadoabouttraversal
-   narr/traversal
    narr/views
    narr/renderers
    narr/templates
    narr/viewconfig
-   narr/resources
    narr/assets
    narr/webob
    narr/sessions
-   narr/security
-   narr/hybrid
-   narr/i18n
-   narr/vhosting
    narr/events
    narr/environment
+   narr/logging
+   narr/paste
+   narr/commandline
+   narr/i18n
+   narr/vhosting
    narr/testing
+   narr/resources
+   narr/hellotraversal
+   narr/muchadoabouttraversal
+   narr/traversal
+   narr/security
+   narr/hybrid
    narr/hooks
-   narr/advconfig
-   narr/declarative
+   narr/introspector
    narr/extending
-   narr/router
+   narr/advconfig
+   narr/extconfig
+   narr/scaffolding
    narr/threadlocals
    narr/zca
-   narr/forms
 
 Tutorials
 =========
 
-Detailed tutorials explaining how to use :app:`Pyramid` to build
-various types of applications and how to deploy :app:`Pyramid`
-applications to various platforms.
+Tutorials explaining how to use :app:`Pyramid` to build various types of
+applications, and how to deploy :app:`Pyramid` applications to various
+platforms.
 
 .. toctree::
    :maxdepth: 2
 
-   tutorials/wiki/index.rst
    tutorials/wiki2/index.rst
+   tutorials/wiki/index.rst
    tutorials/bfg/index.rst
-   tutorials/gae/index.rst
    tutorials/modwsgi/index.rst
-   tutorials/zeo/index.rst
-   tutorials/catalog/index.rst
 
-Reference Material
+API Documentation
 ==================
 
-Reference material includes API documentation and documentation of
-every :app:`Pyramid` :term:`ZCML directive`.
+Documentation for every :app:`Pyramid` API.
 
 .. toctree::
    :maxdepth: 2
 
    api
-   zcml
 
-Detailed Change History
-=======================
+Change History
+==============
 
 .. toctree::
    :maxdepth: 1
 
    changes
 
-Design Documentation
-====================
+Design Documents
+================
 
 .. toctree::
    :maxdepth: 1
@@ -126,7 +153,8 @@ application.  Check this application out via:
 
 `virginia <https://github.com/Pylons/virginia>`_ is a very simple dynamic
 file rendering application.  It is willing to render structured text
-documents, HTML documents, and images from a filesystem directory.  An
+documents, HTML documents, and images from a filesystem directory.
+It's also a good example of :term:`traversal`. An
 earlier version of this application runs the `repoze.org
 <http://repoze.org>`_ website.  Check this application out via:
 
@@ -135,41 +163,20 @@ earlier version of this application runs the `repoze.org
   git clone git://github.com/Pylons/virginia.git
 
 `shootout <https://github.com/Pylons/shootout>`_ is an example "idea
-competition" application by Carlos de la Guardia.  It demonstrates a hybrid
-of :term:`URL dispatch` and :term:`traversal` and integration with
-`SQLAlchemy <http://www.sqlalchemy.org/>`_, :term:`repoze.who`, and
-`Deliverance <http://www.deliveranceproject.org/>`_.  Check this application
-out of version control via:
+competition" application by Carlos de la Guardia and Lukasz Fidosz.  It
+demonstrates :term:`URL dispatch`, simple authentication, integration
+with `SQLAlchemy <http://www.sqlalchemy.org/>`_ and ``pyramid_simpleform``.
+Check this application out of version control via:
 
 .. code-block:: text
 
   git clone git://github.com/Pylons/shootout.git
 
-Older Sample Applications (repoze.bfg)
-======================================
-
-.. note::
-
-   These applications are for an older version of :app:`Pyramid`, which was
-   named :mod:`repoze.bfg`.  They won't work unmodified under Pyramid, but
-   might provide useful clues.
-
-`bfgsite <http://svn.repoze.org/bfgsite/trunk>`_ is the software which
-runs the `bfg.repoze.org <http://bfg.repoze.org>`_ website.  It
-demonstrates integration with Trac, and includes several
-mini-applications such as a pastebin and tutorial engine.  Check a
-buildout for this application out of Subversion via:
-
-.. code-block:: text
-
-  svn co http://svn.repoze.org/buildouts/bfgsite/ bfgsite_buildout
-
-`KARL <http://karlproject.org>`_ is a moderately-sized application
-(roughly 70K lines of Python code) built on top of :mod:`repoze.bfg`
-and other Repoze software.  It is an open source web system for
-collaboration, organizational intranets, and knowledge management, It
-provides facilities for wikis, calendars, manuals, searching, tagging,
-commenting, and file uploads.  See the `KARL site
+`KARL <http://karlproject.org>`_ is a moderately-sized application (roughly
+80K lines of Python code) built on top of :app:`Pyramid`.  It is an open
+source web system for collaboration, organizational intranets, and knowledge
+management. It provides facilities for wikis, calendars, manuals, searching,
+tagging, commenting, and file uploads.  See the `KARL site
 <http://karlproject.org>`_ for download and installation details.
 
 Support and Development
@@ -182,9 +189,9 @@ To report bugs, use the `issue tracker
 <http://github.com/Pylons/pyramid/issues>`_.
 
 If you've got questions that aren't answered by this documentation,
-contact the `Pylons-devel maillist
-<http://groups.google.com/group/pylons-devel>`_ or join the `#pylons
-IRC channel <irc://irc.freenode.net/#pylons>`_.
+contact the `Pylons-discuss maillist
+<http://groups.google.com/group/pylons-discuss>`_ or join the `#pyramid
+IRC channel <irc://irc.freenode.net/#pyramid>`_.
 
 Browse and check out tagged and trunk versions of :app:`Pyramid` via
 the `Pyramid GitHub repository <http://github.com/Pylons/pyramid/>`_.
@@ -204,3 +211,14 @@ Index and Glossary
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`search`
+
+
+.. add glossary, foreword, and latexindex in a hidden toc to avoid warnings
+
+.. toctree::
+   :hidden:
+
+   glossary
+   foreword.rst
+   latexindex.rst
+

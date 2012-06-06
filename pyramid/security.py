@@ -1,10 +1,13 @@
 from zope.interface import providedBy
 
-from pyramid.interfaces import IAuthenticationPolicy
-from pyramid.interfaces import IAuthorizationPolicy
-from pyramid.interfaces import ISecuredView
-from pyramid.interfaces import IViewClassifier
+from pyramid.interfaces import (
+    IAuthenticationPolicy,
+    IAuthorizationPolicy,
+    ISecuredView,
+    IViewClassifier,
+    )
 
+from pyramid.compat import map_
 from pyramid.threadlocal import get_current_registry
 
 Everyone = 'system.Everyone'
@@ -23,6 +26,8 @@ class AllPermissionsList(object):
 
 ALL_PERMISSIONS = AllPermissionsList()
 DENY_ALL = (Deny, Everyone, ALL_PERMISSIONS)
+
+NO_PERMISSION_REQUIRED = '__no_permission_required__'
 
 def has_permission(permission, context, request):
     """ Provided a permission (a string or unicode object), a context
@@ -95,7 +100,7 @@ def effective_principals(request):
 
     policy = reg.queryUtility(IAuthenticationPolicy)
     if policy is None:
-        return []
+        return [Everyone]
     return policy.effective_principals(request)
 
 def principals_allowed_by_permission(context, permission):
@@ -107,7 +112,9 @@ def principals_allowed_by_permission(context, permission):
     :mod:`pyramid.security.Everyone` (the special principal
     identifier representing all principals).
 
-    .. note:: even if an :term:`authorization policy` is in effect,
+    .. note::
+
+       even if an :term:`authorization policy` is in effect,
        some (exotic) authorization policies may not implement the
        required machinery for this function; those will cause a
        :exc:`NotImplementedError` exception to be raised when this
@@ -130,7 +137,7 @@ def view_execution_permitted(context, request, name=''):
         reg = request.registry
     except AttributeError:
         reg = get_current_registry() # b/c
-    provides = [IViewClassifier] + map(providedBy, (request, context))
+    provides = [IViewClassifier] + map_(providedBy, (request, context))
     view = reg.adapters.lookup(provides, ISecuredView, name=name)
     if view is None:
         return Allowed(
@@ -144,7 +151,7 @@ def remember(request, principal, **kw):
     implied by the data passed as ``principal`` and ``*kw`` using the
     current :term:`authentication policy`.  Common usage might look
     like so within the body of a view function (``response`` is
-    assumed to be an :term:`WebOb` -style :term:`response` object
+    assumed to be a :term:`WebOb` -style :term:`response` object
     computed previously by the view code)::
 
       from pyramid.security import remember
@@ -190,14 +197,14 @@ def forget(request):
         return []
     else:
         return policy.forget(request)
-    
+
 class PermitsResult(int):
     def __new__(cls, s, *args):
         inst = int.__new__(cls, cls.boolval)
         inst.s = s
         inst.args = args
         return inst
-        
+
     @property
     def msg(self):
         return self.s % self.args
@@ -256,22 +263,22 @@ class ACLPermitsResult(int):
                                                     self.msg)
 
 class ACLDenied(ACLPermitsResult):
-    """ An instance of ``ACLDenied`` represents that a security check
-    made explicitly against ACL was denied.  It evaluates equal to all
-    boolean false types.  It also has attributes which indicate which
-    acl, ace, permission, principals, and context were involved in the
-    request.  Its __str__ method prints a summary of these attributes
-    for debugging purposes.  The same summary is available as the
-    ``msg`` attribute."""
+    """ An instance of ``ACLDenied`` represents that a security check made
+    explicitly against ACL was denied.  It evaluates equal to all boolean
+    false types.  It also has the following attributes: ``acl``, ``ace``,
+    ``permission``, ``principals``, and ``context``.  These attributes
+    indicate the security values involved in the request.  Its __str__ method
+    prints a summary of these attributes for debugging purposes.  The same
+    summary is available as the ``msg`` attribute."""
     boolval = 0
 
 class ACLAllowed(ACLPermitsResult):
-    """ An instance of ``ACLAllowed`` represents that a security check
-    made explicitly against ACL was allowed.  It evaluates equal to
-    all boolean true types.  It also has attributes which indicate
-    which acl, ace, permission, principals, and context were involved
-    in the request.  Its __str__ method prints a summary of these
-    attributes for debugging purposes.  The same summary is available
-    as the ``msg`` attribute."""
+    """ An instance of ``ACLAllowed`` represents that a security check made
+    explicitly against ACL was allowed.  It evaluates equal to all boolean
+    true types.  It also has the following attributes: ``acl``, ``ace``,
+    ``permission``, ``principals``, and ``context``.  These attributes
+    indicate the security values involved in the request.  Its __str__ method
+    prints a summary of these attributes for debugging purposes.  The same
+    summary is available as the ``msg`` attribute."""
     boolval = 1
 

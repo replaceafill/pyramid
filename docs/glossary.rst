@@ -7,29 +7,36 @@ Glossary
    :sorted:
 
    request
-     A ``WebOb`` request object.  See :ref:`webob_chapter` (narrative)
-     and :ref:`request_module` (API documentation) for information
-     about request objects.
+     An object that represents an HTTP request, usually an instance of the
+     :class:`pyramid.request.Request` class.  See :ref:`webob_chapter`
+     (narrative) and :ref:`request_module` (API documentation) for
+     information about request objects.
 
    request factory
-     An object which, provided a WSGI environment as a single
-     positional argument, returns a ``WebOb`` compatible request.
+     An object which, provided a :term:`WSGI` environment as a single
+     positional argument, returns a Pyramid-compatible request.
 
    response
-     An object that has three attributes: ``app_iter`` (representing an
-     iterable body), ``headerlist`` (representing the http headers sent
-     to the user agent), and ``status`` (representing the http status
-     string sent to the user agent).  This is the interface defined for
-     ``WebOb`` response objects.  See :ref:`webob_chapter` for
-     information about response objects.
+     An object returned by a :term:`view callable` that represents response
+     data returned to the requesting user agent.  It must implements the
+     :class:`pyramid.interfaces.IResponse` interface.  A response object is
+     typically an instance of the :class:`pyramid.response.Response` class or
+     a subclass such as :class:`pyramid.httpexceptions.HTTPFound`.  See
+     :ref:`webob_chapter` for information about response objects.
+
+   response adapter
+     A callable which accepts an arbitrary object and "converts" it to a
+     :class:`pyramid.response.Response` object.  See :ref:`using_iresponse`
+     for more information.
 
    Repoze
-     "Repoze" is essentially a "brand" of software developed by
-     `Agendaless Consulting <http://agendaless.com>`_ and a set of
-     contributors.  The term has no special intrinsic meaning.  The
-     project's `website <http://repoze.org>`_ has more information.
-     The software developed "under the brand" is available in a
-     `Subversion repository <http://svn.repoze.org>`_.
+     "Repoze" is essentially a "brand" of software developed by `Agendaless
+     Consulting <http://agendaless.com>`_ and a set of contributors.  The
+     term has no special intrinsic meaning.  The project's `website
+     <http://repoze.org>`_ has more information.  The software developed
+     "under the brand" is available in a `Subversion repository
+     <http://svn.repoze.org>`_.  Pyramid was originally known as
+     :mod:`repoze.bfg`.
 
    setuptools
      `Setuptools <http://peak.telecommunity.com/DevCenter/setuptools>`_
@@ -54,7 +61,7 @@ Glossary
      For example, the asset specification
      ``my.package:static/baz.css`` identifies the file named
      ``baz.css`` in the ``static`` subdirectory of the ``my.package``
-     Python :term:`package`.  See :ref:`asset_specifications` for more 
+     Python :term:`package`.  See :ref:`asset_specifications` for more
      info.
 
    package
@@ -64,7 +71,7 @@ Glossary
 
    module
      A Python source file; a file on the filesystem that typically ends with
-     the extension ``.py`` or ``.pyc``.  Modules often live in a 
+     the extension ``.py`` or ``.pyc``.  Modules often live in a
      :term:`package`.
 
    project
@@ -88,10 +95,10 @@ Glossary
 
    dotted Python name
      A reference to a Python object by name using a string, in the form
-     ``path.to.modulename:attributename``.  Often used in Paste and
-     setuptools configurations.  A variant is used in dotted names
-     within :term:`ZCML` attributes that name objects (such as the ZCML
-     "view" directive's "view" attribute): the colon (``:``) is not
+     ``path.to.modulename:attributename``.  Often used in Pyramid and
+     setuptools configurations.  A variant is used in dotted names within
+     configurator method arguments that name objects (such as the "add_view"
+     method's "view" and "context" attributes): the colon (``:``) is not
      used; in its place is a dot.
 
    view
@@ -116,8 +123,8 @@ Glossary
      with configuration information.  This configuration information helps
      map a given :term:`request` to a particular view callable and it can
      influence the response of a view callable.  :app:`Pyramid` views can be
-     configured via :term:`imperative configuration`, :term:`ZCML` or by a
-     special ``@view_config`` decorator coupled with a :term:`scan`.  See
+     configured via :term:`imperative configuration`, or by a special
+     ``@view_config`` decorator coupled with a :term:`scan`.  See
      :ref:`view_config_chapter` for more information about view
      configuration.
 
@@ -181,10 +188,10 @@ Glossary
      :ref:`urldispatch_chapter` for more information.
 
    context
-     An resource in the resource tree that is found during :term:`traversal`
+     A resource in the resource tree that is found during :term:`traversal`
      or :term:`URL dispatch` based on URL data; if it's found via traversal,
      it's usually a :term:`resource` object that is part of a resource tree;
-     if it's found via :term:`URL dispatch`, it's a object manufactured on
+     if it's found via :term:`URL dispatch`, it's an object manufactured on
      behalf of the route's "factory".  A context resource becomes the subject
      of a :term:`view`, and often has security information attached to
      it.  See the :ref:`traversal_chapter` chapter and the
@@ -213,9 +220,9 @@ Glossary
      a :term:`context` resource.  A permission is associated with a view name
      and a resource type by the developer.  Resources are decorated with
      security declarations (e.g. an :term:`ACL`), which reference these
-     tokens also.  Permissions are used by the active to security policy to
+     tokens also.  Permissions are used by the active security policy to
      match the view permission against the resources's statements about which
-     permissions are granted to which principal in a context in order to to
+     permissions are granted to which principal in a context in order to
      answer the question "is this user allowed to do this".  Examples of
      permissions: ``read``, or ``view_blog_entries``.
 
@@ -283,21 +290,21 @@ Glossary
      :term:`principal` (or principals) associated with a request.
 
    WSGI
-     `Web Server Gateway Interface <http://wsgi.org/>`_.  This is a
+     `Web Server Gateway Interface <http://www.wsgi.org/>`_.  This is a
      Python standard for connecting web applications to web servers,
-     similar to the concept of Java Servlets.  ``pyramid`` requires
+     similar to the concept of Java Servlets.  :app:`Pyramid` requires
      that your application be served as a WSGI application.
 
    middleware
      *Middleware* is a :term:`WSGI` concept.  It is a WSGI component
      that acts both as a server and an application.  Interesting uses
      for middleware exist, such as caching, content-transport
-     encoding, and other functions.  See `WSGI.org <http://wsgi.org>`_
+     encoding, and other functions.  See `WSGI.org <http://www.wsgi.org>`_
      or `PyPI <http://python.org/pypi>`_ to find middleware for your
      application.
 
    pipeline
-     The :term:`Paste` term for a single configuration of a WSGI
+     The :term:`PasteDeploy` term for a single configuration of a WSGI
      server, a WSGI application, with a set of middleware in-between.
 
    Zope
@@ -311,7 +318,8 @@ Glossary
      `A full-featured Python web framework <http://djangoproject.com>`_.
 
    Pylons
-     `A lightweight Python web framework <http://pylonshq.com>`_.
+     `A lightweight Python web framework <http://pylonshq.com>`_ and a
+     predecessor of Pyramid.
 
    ZODB
       `Zope Object Database <http://zodb.org>`_, a
@@ -324,28 +332,23 @@ Glossary
       :term:`ZODB` database.
 
    WebOb
-     `WebOb <http://pythonpaste.org/webob/>`_ is a WSGI request/response
+     `WebOb <http://webob.org>`_ is a WSGI request/response
      library created by Ian Bicking.
-
-   Paste
-     `Paste <http://pythonpaste.org>`_ is a WSGI development and
-     deployment system developed by Ian Bicking.
 
    PasteDeploy
      `PasteDeploy <http://pythonpaste.org>`_ is a library used by
      :app:`Pyramid` which makes it possible to configure
      :term:`WSGI` components together declaratively within an ``.ini``
-     file.  It was developed by Ian Bicking as part of :term:`Paste`.
+     file.  It was developed by Ian Bicking.
 
    Chameleon
-     `chameleon <http://chameleon.repoze.org>`_ is an attribute
-     language template compiler which supports both the :term:`ZPT` and
-     :term:`Genshi` templating specifications.  It is written and
-     maintained by Malthe Borch.  It has several extensions, such as
-     the ability to use bracketed (Genshi-style) ``${name}`` syntax,
-     even within ZPT.  It is also much faster than the reference
-     implementations of both ZPT and Genshi.  :app:`Pyramid` offers
-     Chameleon templating out of the box in ZPT and text flavors.
+     `chameleon <http://chameleon.repoze.org>`_ is an attribute language
+     template compiler which supports the :term:`ZPT` templating
+     specification.  It is written and maintained by Malthe Borch.  It has
+     several extensions, such as the ability to use bracketed (Mako-style)
+     ``${name}`` syntax.  It is also much faster than the reference
+     implementation of ZPT.  :app:`Pyramid` offers Chameleon templating out
+     of the box in ZPT and text flavors.
 
    ZPT
      The `Zope Page Template <http://wiki.zope.org/ZPT/FrontPage>`_
@@ -354,14 +357,14 @@ Glossary
    METAL
      `Macro Expansion for TAL <http://wiki.zope.org/ZPT/METAL>`_, a
      part of :term:`ZPT` which makes it possible to share common look
-     and feel between templates.  
+     and feel between templates.
 
    Genshi
      An `XML templating language <http://pypi.python.org/pypi/Genshi/>`_
      by Christopher Lenz.
 
    Jinja2
-     A `text templating language <http://jinja.pocoo.org/2/>`_ by Armin 
+     A `text templating language <http://jinja.pocoo.org/2/>`_ by Armin
      Ronacher.
 
    Routes
@@ -377,29 +380,10 @@ Glossary
      ultimately a :term:`view`).  See also :term:`url dispatch`.
 
    route configuration
-     Route configuration is the act of using :term:`imperative
-     configuration` or a :term:`ZCML` ``<route>`` statement to
-     associate request parameters with a particular :term:`route` using
-     pattern matching and :term:`route predicate` statements.  See
-     :ref:`urldispatch_chapter` for more information about route
-     configuration.
-
-   ZCML
-     `Zope Configuration Markup Language
-     <http://www.muthukadan.net/docs/zca.html#zcml>`_, an XML dialect
-     used by Zope and :app:`Pyramid` for configuration tasks.  ZCML
-     is capable of performing different types of :term:`configuration
-     declaration`, but its primary purpose in :app:`Pyramid` is to
-     perform :term:`view configuration` and :term:`route configuration`
-     within the ``configure.zcml`` file in a :app:`Pyramid`
-     application.  You can use ZCML as an alternative to
-     :term:`imperative configuration`.
-
-   ZCML directive
-     A ZCML "tag" such as ``<view>`` or ``<route>``.
-
-   ZCML declaration
-     The concrete use of a :term:`ZCML directive` within a ZCML file.
+     Route configuration is the act of associating request parameters with a
+     particular :term:`route` using pattern matching and :term:`route
+     predicate` statements.  See :ref:`urldispatch_chapter` for more
+     information about route configuration.
 
    Zope Component Architecture
      The `Zope Component Architecture
@@ -418,7 +402,7 @@ Glossary
    root
      The object at which :term:`traversal` begins when :app:`Pyramid`
      searches for a :term:`context` resource (for :term:`URL Dispatch`, the
-     root is *always* the context resource unless the ``traverse=`` argument 
+     root is *always* the context resource unless the ``traverse=`` argument
      is used in route configuration).
 
    subpath
@@ -457,9 +441,9 @@ Glossary
 
    subscriber
      A callable which receives an :term:`event`.  A callable becomes a
-     subscriber via :term:`imperative configuration` or the
-     ``<subscriber>`` ZCML directive.  See :ref:`events_chapter` for
-     more information.
+     subscriber via :term:`imperative configuration` or via
+     :term:`configuration decoration`.  See :ref:`events_chapter` for more
+     information.
 
    request type
      An attribute of a :term:`request` that allows for specialization
@@ -467,7 +451,7 @@ Glossary
      :term:`request` object that :app:`Pyramid` generates and
      manipulates has one or more :term:`interface` objects attached to
      it.  The default interface attached to a request object is
-     ``pyramid.interfaces.IRequest``.
+     :class:`pyramid.interfaces.IRequest`.
 
    repoze.lemonade
      Zope2 CMF-like `data structures and helper facilities
@@ -478,8 +462,7 @@ Glossary
      An indexing and search facility (fielded and full-text) based on
      `zope.index <http://pypi.python.org/pypi/zope.index>`_.  See `the
      documentation <http://docs.repoze.org/catalog>`_ for more
-     information.  A tutorial for its usage in :app:`Pyramid`
-     exists in :ref:`catalog_tutorial`.
+     information.
 
    repoze.who
      `Authentication middleware <http://docs.repoze.org/who>`_ for
@@ -506,7 +489,7 @@ Glossary
      available as its ``__parent__`` attribute.
 
    root factory
-     The "root factory" of an :app:`Pyramid` application is called
+     The "root factory" of a :app:`Pyramid` application is called
      on every request sent to the application.  The root factory
      returns the traversal root of an application.  It is
      conventionally named ``get_root``.  An application may supply a
@@ -517,12 +500,15 @@ Glossary
      all URL-to-view code mappings.
 
    SQLAlchemy
-     `SQLAlchemy' <http://www.sqlalchemy.org/>`_ is an object
+     `SQLAlchemy <http://www.sqlalchemy.org/>`_ is an object
      relational mapper used in tutorials within this documentation.
 
    JSON
      `JavaScript Object Notation <http://www.json.org/>`_ is a data
      serialization format.
+
+   jQuery
+     A popular `Javascript library <http://jquery.org>`_.
 
    renderer
      A serializer that can be referred to via :term:`view
@@ -577,15 +563,14 @@ Glossary
      also `PEP 318 <http://www.python.org/dev/peps/pep-0318/>`_.
 
    configuration declaration
-     An individual method call made to an instance of a
-     :app:`Pyramid` :term:`Configurator` object which performs an
-     arbitrary action, such as registering a :term:`view configuration`
-     (via the ``view`` method of the configurator) or :term:`route
-     configuration` (via the ``route`` method of the configurator).  A
-     set of configuration declarations is also usually implied via the
-     use of a :term:`ZCML declaration` within an application, or a set
-     of configuration declarations might be performed by a :term:`scan`
-     of code in a package.
+     An individual method call made to a :term:`configuration directive`,
+     such as registering a :term:`view configuration` (via the
+     :meth:`~pyramid.config.Configurator.add_view` method of the
+     configurator) or :term:`route configuration` (via the
+     :meth:`~pyramid.config.Configurator.add_route` method of the
+     configurator).  A set of configuration declarations is also implied by
+     the :term:`configuration decoration` detected by a :term:`scan` of code
+     in a package.
 
    configuration decoration
      Metadata implying one or more :term:`configuration declaration`
@@ -601,7 +586,7 @@ Glossary
    configurator
      An object used to do :term:`configuration declaration` within an
      application.  The most common configurator is an instance of the
-     ``pyramid.config.Configurator`` class.
+     :class:`pyramid.config.Configurator` class.
 
    imperative configuration
      The configuration mode in which you use Python to call methods on
@@ -609,28 +594,27 @@ Glossary
      declaration` required by your application.
 
    declarative configuration
-     The configuration mode in which you use :term:`ZCML` to make
-     a set of :term:`configuration declaration` statements.
+     The configuration mode in which you use the combination of
+     :term:`configuration decoration` and a :term:`scan` to configure your
+     Pyramid application.
 
    Not Found view
-      An :term:`exception view` invoked by :app:`Pyramid` when the
-      developer explicitly raises a ``pyramid.exceptions.NotFound``
-      exception from within :term:`view` code or :term:`root factory`
-      code, or when the current request doesn't match any :term:`view
-      configuration`.  :app:`Pyramid` provides a default
-      implementation of a not found view; it can be overridden.  See
+      An :term:`exception view` invoked by :app:`Pyramid` when the developer
+      explicitly raises a :class:`pyramid.httpexceptions.HTTPNotFound`
+      exception from within :term:`view` code or :term:`root factory` code,
+      or when the current request doesn't match any :term:`view
+      configuration`.  :app:`Pyramid` provides a default implementation of a
+      not found view; it can be overridden.  See
       :ref:`changing_the_notfound_view`.
 
    Forbidden view
-      An :term:`exception view` invoked by :app:`Pyramid` when the
-      developer explicitly raises a
-      ``pyramid.exceptions.Forbidden`` exception from within
-      :term:`view` code or :term:`root factory` code, or when the
-      :term:`view configuration` and :term:`authorization policy`
+      An :term:`exception view` invoked by :app:`Pyramid` when the developer
+      explicitly raises a :class:`pyramid.httpexceptions.HTTPForbidden`
+      exception from within :term:`view` code or :term:`root factory` code,
+      or when the :term:`view configuration` and :term:`authorization policy`
       found for a request disallows a particular view invocation.
-      :app:`Pyramid` provides a default implementation of a
-      forbidden view; it can be overridden.  See
-      :ref:`changing_the_forbidden_view`.
+      :app:`Pyramid` provides a default implementation of a forbidden view;
+      it can be overridden.  See :ref:`changing_the_forbidden_view`.
 
    Exception view
       An exception view is a :term:`view callable` which may be
@@ -638,23 +622,28 @@ Glossary
       request processing.  See :ref:`exception_views` for more
       information.
 
+   HTTP Exception
+      The set of exception classes defined in :mod:`pyramid.httpexceptions`.
+      These can be used to generate responses with various status codes when
+      raised or returned from a :term:`view callable`.  See also
+      :ref:`http_exceptions`.
+
    thread local
-      A thread-local variable is one which is essentially a global
-      variable in terms of how it is accessed and treated, however,
-      each `thread
-      <http://en.wikipedia.org/wiki/Thread_(computer_science)>` used by
-      the application may have a different value for this same "global"
-      variable.  :app:`Pyramid` uses a small number of thread local
-      variables, as described in :ref:`threadlocals_chapter`. See also
-      the `threading.local documentation
-      <http://docs.python.org/library/threading.html#threading.local>`
-      for more information.
+      A thread-local variable is one which is essentially a global variable
+      in terms of how it is accessed and treated, however, each `thread
+      <http://en.wikipedia.org/wiki/Thread_(computer_science)>`_ used by the
+      application may have a different value for this same "global" variable.
+      :app:`Pyramid` uses a small number of thread local variables, as
+      described in :ref:`threadlocals_chapter`. See also the `threading.local
+      documentation
+      <http://docs.python.org/library/threading.html#threading.local>`_ for
+      more information.
 
    multidict
-     An ordered dictionary that can have multiple values for each
-     key. Adds the methods ``getall``, ``getone``, ``mixed``, and
-     ``add`` to the normal dictionary interface.  See
-     http://pythonpaste.org/webob/class-webob.multidict.MultiDict.html
+     An ordered dictionary that can have multiple values for each key. Adds
+     the methods ``getall``, ``getone``, ``mixed``, ``add`` and
+     ``dict_of_lists`` to the normal dictionary interface.  See
+     :ref:`multidict_narr` and :class:`pyramid.interfaces.IMultiDict`.
 
    PyPI
      `The Python Package Index <http://pypi.python.org/pypi>`_, a
@@ -665,11 +654,11 @@ Glossary
      and Chris McDonough.  See also http://agendaless.com .
 
    Jython
-     A `Python implementation <http://www.jython.org/>` written for
+     A `Python implementation <http://www.jython.org/>`_ written for
      the Java Virtual Machine.
 
    Python
-     The `programming language <http://python.org>` in which
+     The `programming language <http://python.org>`_ in which
      :app:`Pyramid` is written.
 
    CPython
@@ -719,11 +708,10 @@ Glossary
      within one or more :term:`translation directory` directories.
 
    Translator
-     A callable which receives a :term:`translation string` and
-     returns a translated Unicode object for the purposes of
-     internationalization.  A :term:`localizer` supplies a
-     translator to a :app:`Pyramid` application accessible via its
-     ``translate`` method.
+     A callable which receives a :term:`translation string` and returns a
+     translated Unicode object for the purposes of internationalization.  A
+     :term:`localizer` supplies a translator to a :app:`Pyramid` application
+     accessible via its :class:`~pyramid.i18n.Localizer.translate` method.
 
    Translation Directory
      A translation directory is a :term:`gettext` translation
@@ -767,6 +755,10 @@ Glossary
      additional locale functionality becomes available to your
      application.
 
+   Lingua
+     A package by Wichert Akkerman which provides :term:`Babel` message
+     extractors for Python source files and Chameleon ZPT template files.
+
    Message Identifier
      A string used as a translation lookup key during localization.
      The ``msgid`` argument to a :term:`translation string` is a
@@ -807,12 +799,12 @@ Glossary
 
    pregenerator
       A pregenerator is a function associated by a developer with a
-      :term:`route`.  It is called by :func:`pyramid.url.route_url`
-      in order to adjust the set of arguments passed to it by the user
-      for special purposes.  It will influence the URL returned by
-      ``route_url``.  See
-      :class:`pyramid.interfaces.IRoutePregenerator` for more
-      information.
+      :term:`route`.  It is called by
+      :meth:`~pyramid.request.Request.route_url` in order to adjust the set
+      of arguments passed to it by the user for special purposes.  It will
+      influence the URL returned by
+      :meth:`~pyramid.request.Request.route_url`.  See
+      :class:`pyramid.interfaces.IRoutePregenerator` for more information.
 
    session
       A namespace that is valid for some period of continual activity
@@ -832,24 +824,21 @@ Glossary
    View handler
      A view handler ties together
      :meth:`pyramid.config.Configurator.add_route` and
-     :meth:`pyramid.config.Configurator.add_view` to make it more
-     convenient to register a collection of views as a single class when
-     using :term:`url dispatch`.  See also :ref:`views_chapter`.
+     :meth:`pyramid.config.Configurator.add_view` to make it more convenient
+     to register a collection of views as a single class when using
+     :term:`url dispatch`.  View handlers ship as part of the
+     :term:`pyramid_handlers` add-on package.
 
    Deployment settings
      Deployment settings are settings passed to the :term:`Configurator` as a
      ``settings`` argument.  These are later accessible via a
-     ``request.registry.settings`` dictionary.  Deployment settings can be
-     used as global application values.
+     ``request.registry.settings`` dictionary in views or as
+     ``config.registry.settings`` in configuration code.  Deployment settings
+     can be used as global application values.
 
    WebTest
      `WebTest <http://pythonpaste.org/webtest/>`_ is a package which can help
      you write functional tests for your WSGI application.
-
-   WebError
-     WSGI middleware which can display debuggable traceback information in
-     the browser when an exception is raised by a Pyramid application.  See
-     http://pypi.python.org/pypi/WebError .
 
    view mapper
     A view mapper is a class which implements the
@@ -862,3 +851,146 @@ Glossary
     ``request.matchdict`` when a :term:`URL dispatch` route has been matched.
     Its keys are names as identified within the route pattern; its values are
     the values matched by each pattern name.
+
+   pyramid_zcml
+     An add-on package to :app:`Pyramid` which allows applications to be
+     configured via :term:`ZCML`.  It is available on :term:`PyPI`.  If you
+     use :mod:`pyramid_zcml`, you can use ZCML as an alternative to
+     :term:`imperative configuration` or :term:`configuration decoration`.
+
+   ZCML
+     `Zope Configuration Markup Language
+     <http://www.muthukadan.net/docs/zca.html#zcml>`_, an XML dialect
+     used by Zope and :term:`pyramid_zcml` for configuration tasks.
+
+   pyramid_handlers
+     An add-on package which allows :app:`Pyramid` users to create classes
+     that are analogues of Pylons 1 "controllers".  See
+     http://docs.pylonsproject.org/projects/pyramid_handlers/dev/ .
+
+   pyramid_jinja2
+     :term:`Jinja2` templating system bindings for Pyramid, documented at
+     http://docs.pylonsproject.org/projects/pyramid_jinja2/dev/ .  This
+     package also includes a scaffold named
+     ``pyramid_jinja2_starter``, which creates an application package based
+     on the Jinja2 templating system.
+
+   Akhet
+     `Akhet <http://docs.pylonsproject.org/projects/akhet/en/latest/>`_ is a 
+     Pyramid library and demo application with a Pylons-like feel.
+     It's most known for its former application scaffold, which helped 
+     users transition from Pylons and those prefering a more Pylons-like API.
+     The scaffold has been retired but the demo plays a similar role. 
+
+   Pyramid Cookbook
+     An additional documentation resource for Pyramid which presents topical,
+     practical usages of Pyramid available via
+     http://docs.pylonsproject.org/ .
+
+   distutils
+     The standard system for packaging and distributing Python packages.  See
+     http://docs.python.org/distutils/index.html for more information.
+     :term:`setuptools` is actually an *extension* of the Distutils.
+
+   exception response
+     A :term:`response` that is generated as the result of a raised exception
+     being caught by an :term:`exception view`.
+
+   PyPy
+     PyPy is an "alternative implementation of the Python
+     language":http://pypy.org/
+
+   tween
+     A bit of code that sits between the Pyramid router's main request
+     handling function and the upstream WSGI component that uses
+     :app:`Pyramid` as its 'app'.  The word "tween" is a contraction of
+     "between".  A tween may be used by Pyramid framework extensions, to
+     provide, for example, Pyramid-specific view timing support, bookkeeping
+     code that examines exceptions before they are returned to the upstream
+     WSGI application, or a variety of other features.  Tweens behave a bit
+     like :term:`WSGI` 'middleware' but they have the benefit of running in a
+     context in which they have access to the Pyramid :term:`application
+     registry` as well as the Pyramid rendering machinery.  See
+     :ref:`registering_tweens`.
+
+   pyramid_debugtoolbar
+     A Pyramid add on which displays a helpful debug toolbar "on top of" HTML
+     pages rendered by your application, displaying request, routing, and
+     database information.  :mod:`pyramid_debugtoolbar` is configured into
+     the ``development.ini`` of all applications which use a Pyramid
+     :term:`scaffold`.  For more information, see
+     http://docs.pylonsproject.org/projects/pyramid_debugtoolbar/dev/ .
+
+   scaffold
+     A project template that generates some of the major parts of a Pyramid
+     application and helps users to quickly get started writing larger
+     applications.  Scaffolds are usually used via the ``pcreate`` command.
+
+   pyramid_exclog
+     A package which logs Pyramid application exception (error) information
+     to a standard Python logger.  This add-on is most useful when
+     used in production applications, because the logger can be configured to
+     log to a file, to UNIX syslog, to the Windows Event Log, or even to
+     email. See its `documentation
+     <http://docs.pylonsproject.org/projects/pyramid_exclog/dev/>`_.
+
+   console script
+     A script written to the ``bin`` (on UNIX, or ``Scripts`` on Windows)
+     directory of a Python installation or virtualenv as the result of
+     running ``setup.py install`` or ``setup.py develop``.
+
+   introspector
+     An object with the methods described by
+     :class:`pyramid.interfaces.IIntrospector` that is available in both
+     configuration code (for registration) and at runtime (for querying) that
+     allows a developer to introspect configuration statements and
+     relationships between those statements.
+
+   conflict resolution
+     Pyramid attempts to resolve ambiguous configuration statements made by
+     application developers via automatic conflict resolution.  Automatic
+     conflict resolution is described in
+     :ref:`automatic_conflict_resolution`.  If Pyramid cannot resolve
+     ambiguous configuration statements, it is possible to manually resolve
+     them as described in :ref:`manually_resolving_conflicts`.
+
+   configuration directive
+     A method of the :term:`Configurator` which causes a configuration action
+     to occur.  The method :meth:`pyramid.config.Configurator.add_view` is a
+     configuration directive, and application developers can add their own
+     directives as necessary (see :ref:`add_directive`).
+
+   action
+     Represents a pending configuration statement generated by a call to a
+     :term:`configuration directive`.  The set of pending configuration
+     actions are processed when :meth:`pyramid.config.Configurator.commit` is
+     called.
+
+   discriminator
+     The unique identifier of an :term:`action`.
+
+   introspectable
+      An object which implements the attributes and methods described in
+      :class:`pyramid.interfaces.IIntrospectable`.  Introspectables are used
+      by the :term:`introspector` to display configuration information about
+      a running Pyramid application.  An introspectable is associated with a
+      :term:`action` by virtue of the
+      :meth:`pyramid.config.Configurator.action` method.
+
+   asset descriptor
+      An instance representing an :term:`asset specification` provided by the
+      :meth:`pyramid.path.AssetResolver.resolve` method.  It supports the
+      methods and attributes documented in
+      :class:`pyramid.interfaces.IAssetDescriptor`.
+
+   Waitress
+      A :term:`WSGI` server that runs on UNIX and Windows under Python 2.6+
+      and Python 3.2+.  Projects generated via Pyramid scaffolding use
+      Waitress as a WGSI server.  See
+      http://docs.pylonsproject.org/projects/waitress/en/latest/ for detailed
+      information.
+
+   Green Unicorn
+      Aka ``gunicorn``, a fast :term:`WSGI` server that runs on UNIX under
+      Python 2.5+ (although at the time of this writing does not support
+      Python 3).  See http://gunicorn.org/ for detailed information.

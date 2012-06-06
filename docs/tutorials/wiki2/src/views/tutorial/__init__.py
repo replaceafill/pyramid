@@ -1,24 +1,18 @@
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 
-from tutorial.models import initialize_sql
+from .models import DBSession
 
 def main(global_config, **settings):
-    """ This function returns a WSGI application.
+    """ This function returns a Pyramid WSGI application.
     """
     engine = engine_from_config(settings, 'sqlalchemy.')
-    initialize_sql(engine)
+    DBSession.configure(bind=engine)
     config = Configurator(settings=settings)
-    config.add_static_view('static', 'tutorial:static')
-    config.add_route('view_wiki', '/', view='tutorial.views.view_wiki')
-    config.add_route('view_page', '/{pagename}',
-                     view='tutorial.views.view_page',
-                     view_renderer='tutorial:templates/view.pt')
-    config.add_route('add_page', '/add_page/{pagename}',
-                     view='tutorial.views.add_page',
-                     view_renderer='tutorial:templates/edit.pt')
-    config.add_route('edit_page', '/{pagename}/edit_page',
-                     view='tutorial.views.edit_page',
-                     view_renderer='tutorial:templates/edit.pt')
+    config.add_static_view('static', 'static', cache_max_age=3600)
+    config.add_route('view_wiki', '/')
+    config.add_route('view_page', '/{pagename}')
+    config.add_route('add_page', '/add_page/{pagename}')
+    config.add_route('edit_page', '/{pagename}/edit_page')
+    config.scan()
     return config.make_wsgi_app()
-
